@@ -1,0 +1,101 @@
+<!-- index.html  Blnc LINE予約システム -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>予約</title>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;padding:20px;}
+.box{max-width:420px;margin:auto;background:#fff;padding:20px;border-radius:12px;}
+h1{text-align:center;}
+input,select,button{
+width:100%;padding:12px;margin:8px 0;
+border:1px solid #ccc;border-radius:8px;
+}
+button{background:#111;color:#fff;border:none;}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>予約</h1>
+
+<input id="name" placeholder="お名前">
+
+<input id="tel" placeholder="電話番号">
+
+<select id="menu">
+<option>カット ¥5000</option>
+<option>カラー ¥7000</option>
+<option>ヘッドスパカラー ¥8000</option>
+<option>パーマ ¥13500</option>
+<option>縮毛矯正 ¥18000</option>
+</select>
+
+<select id="staff">
+<option>指名なし</option>
+<option>下鶴</option>
+<option>来馬</option>
+<option>矢野</option>
+</select>
+
+<input type="date" id="date">
+
+<select id="time"></select>
+
+<button onclick="sendReserve()">予約する</button>
+
+<p id="msg"></p>
+</div>
+
+<script>
+
+window.onload = function(){
+
+  const timeSelect = document.getElementById("time");
+
+  for(let h=9; h<=18; h++){
+    for(let m=0; m<60; m+=30){
+      if(h==18 && m>0) continue;
+
+      let hh=("0"+h).slice(-2);
+      let mm=("0"+m).slice(-2);
+
+      let opt = document.createElement("option");
+      opt.value = hh + ":" + mm;
+      opt.textContent = hh + ":" + mm;
+
+      timeSelect.appendChild(opt);
+    }
+  }
+}
+
+async function sendReserve(){
+
+  const data={
+    name:document.getElementById("name").value,
+    tel:document.getElementById("tel").value,
+    menu:document.getElementById("menu").value,
+    staff:document.getElementById("staff").value,
+    date:document.getElementById("date").value,
+    time:document.getElementById("time").value
+  };
+
+  try{
+    const res = await fetch("https://script.google.com/macros/s/AKfycbxw2-UIUkGbtj-b1shzKl2OIgpn0A3YjNUo1Dn1X_jroGl-hgsdv9SFjVXqt9K5viXA/exec",{
+      method:"POST",
+      body:JSON.stringify(data)
+    });
+
+    const text = await res.text();
+    document.getElementById("msg").innerText = text;
+
+   }catch(e){
+    document.getElementById("msg").innerText="通信エラー";
+  }
+}
+
+</script>
+
+</body>
+</html>
