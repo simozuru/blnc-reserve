@@ -94,9 +94,9 @@ body:JSON.stringify(data)
     const text = await res.text();
     document.getElementById("msg").innerText = text;
 
-   }catch(e){
-    document.getElementById("msg").innerText="通信エラー";
-  }
+}catch(e){
+console.error(e);
+document.getElementById("msg").innerText=e;
 }
 
 </script>
