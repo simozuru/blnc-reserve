@@ -82,10 +82,14 @@ async function sendReserve(){
   };
 
   try{
-    const res = await fetch("https://script.google.com/macros/s/AKfycbz3hWDrdSrPoGwYD0E82DNpKJFPR6hpxDGsQoBbRLmHMEREjDjxHMVgz8m1pkdp_IhE/exec",{
-      method:"POST",
-      body:JSON.stringify(data)
-    });
+const res = await fetch("https://script.google.com/macros/s/AKfycbxw2-UIUkGbtj-b1shzKl2OIgpn0A3YjNUo1Dn1X_jroGl-hgsdv9SFjVXqt9K5viXA/exec",{
+method:"POST",
+headers:{
+"Content-Type":"text/plain"
+},
+body:JSON.stringify(data)
+});
+
 
     const text = await res.text();
     document.getElementById("msg").innerText = text;
