@@ -59,7 +59,7 @@
 
 <script>
 // 【重要】あなたの最新のGASのWebアプリURLに書き換えてください
-const gasUrl = "https://script.google.com/macros/s/XXXXX_YOUR_NEW_GAS_ID_XXXXX/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycbzDMx7BGHKuOuVP6HkJ1hI7MkQid54Co9kLaXcqY8i7NYTWbkdxenjQkb9kt1ai435e/exec";
 
 window.onload = function(){
   // 今日以降の日付しか選べないようにする
@@ -68,6 +68,7 @@ window.onload = function(){
 };
 
 // 空き状況を考慮して時間選択肢を更新する関数
+// 【原因調査・強化版】空き状況を考慮して時間選択肢を更新する関数
 async function updateTimeSlots() {
   const staff = document.getElementById("staff").value;
   const date = document.getElementById("date").value;
@@ -85,24 +86,38 @@ async function updateTimeSlots() {
   msgEl.innerText = "";
 
   try {
-    const response = await fetch(`${gasUrl}?date=${date}&staff=${encodeURIComponent(staff)}`);
+    const fullUrl = `${gasUrl}?date=${date}&staff=${encodeURIComponent(staff)}`;
+    console.log("通信先URL:", fullUrl); // ブラウザのF12コンソールで確認用
+
+    const response = await fetch(fullUrl);
+    
+    // 通信自体が成功したかチェック
+    if (!response.ok) {
+        throw new Error(`GASへの通信に失敗しました (ステータス: ${response.status})`);
+    }
+
     const textData = await response.text();
+    console.log("GASからの返答:", textData); // 届いた中身を表示
+
+    // 届いた中身がJSON（{...}）の形をしているかチェック
+    if (!textData.trim().startsWith('{')) {
+        throw new Error("GASがデータではなくエラー画面（HTML）を返しています。デプロイ設定を確認してください。");
+    }
+
     const data = JSON.parse(textData);
     const bookedTimes = data.bookedTimes || [];
 
+    // --- ここから下の選択肢生成処理は同じ ---
     timeSelect.innerHTML = "";
     let availableCount = 0;
-
     for(let h=9; h<=18; h++){
       for(let m=0; m<60; m+=30){
         if(h==18 && m>0) continue;
         const hh = ("0"+h).slice(-2);
         const mm = ("0"+m).slice(-2);
         const timeStr = hh + ":" + mm;
-
         const opt = document.createElement("option");
         opt.value = timeStr;
-
         if (bookedTimes.includes(timeStr)) {
           opt.textContent = timeStr + " (× 予約済み)";
           opt.disabled = true;
@@ -114,7 +129,6 @@ async function updateTimeSlots() {
         timeSelect.appendChild(opt);
       }
     }
-
     if(availableCount === 0) {
       timeSelect.innerHTML = '<option value="">この日は満席です</option>';
     } else {
@@ -122,9 +136,10 @@ async function updateTimeSlots() {
     }
 
   } catch (e) {
-    console.error(e);
+    console.error("エラー詳細:", e);
     timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
-    msgEl.innerText = "時間データの取得に失敗しました。";
+    // 画面に具体的なエラーメッセージを出す（これで原因がわかります）
+    msgEl.innerText = "【原因】" + e.message;
   }
 }
 
