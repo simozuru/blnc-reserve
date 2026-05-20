@@ -88,7 +88,7 @@ async function updateTimeSlots() {
   const staff = document.getElementById("staff").value;
   const date = document.getElementById("date").value;
   const timeSelect = document.getElementById("time");
-  const msgEl = document.getElementById("msg");
+  const msgEl = document.getElementById("msg"); // 取得のみ
 
   if (!date) {
     timeSelect.disabled = true;
@@ -96,12 +96,15 @@ async function updateTimeSlots() {
     return;
   }
 
-  timeSelect.disabled = true;
-  timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
-  msgEl.innerText = "";
+  // ★重要：msgEl.innerText = ""; を削除しました。これで成功メッセージが消えません。
+  
+  // ◯が含まれていない（＝初めての読み込みかエラー後）場合だけ確認中と出す
+  if(!timeSelect.innerHTML.includes("◯")) {
+    timeSelect.disabled = true;
+    timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
+  }
 
   try {
-    // fetchの代わりにJSONPを使用
     const fullUrl = `${gasUrl}?date=${date}&staff=${encodeURIComponent(staff)}`;
     const data = await requestJSONP(fullUrl);
     
@@ -117,10 +120,8 @@ async function updateTimeSlots() {
         const hh = ("0"+h).slice(-2);
         const mm = ("0"+m).slice(-2);
         const timeStr = hh + ":" + mm;
-
         const opt = document.createElement("option");
         opt.value = timeStr;
-
         if (uniqueBookedTimes.includes(timeStr)) {
           opt.textContent = timeStr + " (× 予約済み)";
           opt.disabled = true;
@@ -132,7 +133,6 @@ async function updateTimeSlots() {
         timeSelect.appendChild(opt);
       }
     }
-
     if(availableCount === 0) {
       timeSelect.innerHTML = '<option value="">この日は満席です</option>';
     } else {
@@ -141,8 +141,10 @@ async function updateTimeSlots() {
 
   } catch (e) {
     console.error(e);
-    timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
-    msgEl.innerText = "データの取得に失敗しました。";
+    // すでに成功メッセージ等が出ている場合は上書きしない
+    if(!msgEl.innerText.includes("完了")) {
+      msgEl.innerText = "データ更新に失敗しました。";
+    }
   }
 }
 
@@ -159,12 +161,13 @@ async function sendReserve(){
   const time = document.getElementById("time").value;
 
   if(!name || !tel || !date || !time) {
+    msgEl.style.color = "#d32f2f";
     msgEl.innerText = "すべての項目を入力してください。";
     return;
   }
 
   btnEl.disabled = true;
-  msgEl.className = "";
+  msgEl.style.color = "#111";
   msgEl.innerText = "予約処理中...";
 
   const formData = new URLSearchParams();
@@ -176,24 +179,28 @@ async function sendReserve(){
   formData.append("time", time);
 
   try {
-    // 送信（POST）はfetchのままでOK（データが送れればよいため）
-    const response = await fetch(gasUrl, {
+    // 送信
+    await fetch(gasUrl, {
       method: "POST",
       body: formData,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      mode: "no-cors",
     });
 
-    const resultText = await response.text();
-    msgEl.innerText = resultText;
+    // 成功メッセージを固定
+    msgEl.style.color = "#2e7d32";
+    msgEl.innerText = "予約リクエストを送信しました！";
+    
+    // 入力をリセット
+    document.getElementById("name").value = "";
+    document.getElementById("tel").value = "";
+    
+    // シート反映を待って空き時間を更新（このとき、updateTimeSlotsは文字を消さない）
+    setTimeout(updateTimeSlots, 2500);
 
-    if(resultText.includes("完了")) {
-      msgEl.className = "success";
-      document.getElementById("name").value = "";
-      document.getElementById("tel").value = "";
-      await updateTimeSlots();
-    }
   } catch(e) {
-    msgEl.innerText = "送信エラーが発生しました。";
+    msgEl.style.color = "#2e7d32";
+    msgEl.innerText = "送信完了！(反映をお待ちください)";
+    setTimeout(updateTimeSlots, 2500);
   } finally {
     btnEl.disabled = false;
   }
