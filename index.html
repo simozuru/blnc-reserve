@@ -1,160 +1,145 @@
-<!-- index.html  店名LINE予約システム -->
-
+<!-- index.html  店名 LINE予約システム -->
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>店名予約</title>
-
-<style>
-body{
-  font-family:sans-serif;
-  background:#f5f5f5;
-  padding:20px;
-}
-
-.box{
-  max-width:420px;
-  margin:auto;
-  background:#fff;
-  padding:20px;
-  border-radius:12px;
-}
-
-h1{
-  text-align:center;
-}
-
-input,select,button{
-  width:100%;
-  padding:12px;
-  margin:8px 0;
-  border:1px solid #ccc;
-  border-radius:8px;
-  box-sizing:border-box;
-}
-
-button{
-  background:#111;
-  color:#fff;
-  border:none;
-}
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>店名予約</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+    .box { max-width: 420px; margin: auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
+    label { font-size: 14px; color: #555; display: block; margin-top: 10px; }
+    input, select, button { width: 100%; padding: 12px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+    button { background: #111; color: #fff; border: none; cursor: pointer; margin-top: 15px; }
+    button:disabled { background: #ccc; }
+    #msg { margin-top: 15px; text-align: center; font-weight: bold; color: #d32f2f; }
+    .success { color: #2e7d32 !important; }
+  </style>
 </head>
-
 <body>
 
 <div class="box">
+  <h1>店名予約</h1>
+  
+  <label for="name">お名前</label>
+  <input id="name" placeholder="山田 太郎">
 
-<h1>店名予約</h1>
+  <label for="tel">電話番号</label>
+  <input id="tel" type="tel" placeholder="09012345678">
 
-<input id="name" placeholder="お名前">
+  <label for="menu">メニュー</label>
+  <select id="menu">
+    <option>メニュー1 ¥0000</option>
+    <option>メニュー2 ¥0000</option>
+    <option>メニュー3 ¥0000</option>
+    <option>メニュー4 ¥0000</option>
+    <option>メニュー5 ¥0000</option>
+  </select>
 
-<input id="tel" placeholder="電話番号">
+  <label for="staff">スタイリスト</label>
+  <select id="staff">
+    <option>指名なし</option>
+    <option>スタッフ1</option>
+    <option>スタッフ2</option>
+    <option>スタッフ3</option>
+  </select>
 
-<select id="menu">
-<option>メニュー1 ¥0000</option>
-<option>メニュー2 ¥0000</option>
-<option>メニュー3 ¥0000</option>
-<option>メニュー4 ¥0000</option>
-<option>メニュー5 ¥0000</option>
-</select>
+  <label for="date">ご希望日</label>
+  <input type="date" id="date">
 
-<select id="staff">
-<option>指名なし</option>
-<option>スタッフ1</option>
-<option>スタッフ2</option>
-<option>スタッフ3</option>
-</select>
+  <label for="time">ご希望時間</label>
+  <select id="time"></select>
 
-<input type="date" id="date">
+  <button id="submit-btn" onclick="sendReserve()">予約する</button>
 
-<select id="time"></select>
-
-<button onclick="sendReserve()">予約する</button>
-
-<p id="msg"></p>
-
+  <p id="msg"></p>
 </div>
 
-<iframe name="hidden_iframe" style="display:none;"></iframe>
-
 <script>
-
+// 時間の選択肢を自動生成
 window.onload = function(){
-
   const timeSelect = document.getElementById("time");
-
   for(let h=9; h<=18; h++){
-
     for(let m=0; m<60; m+=30){
-
       if(h==18 && m>0) continue;
-
-      let hh=("0"+h).slice(-2);
-      let mm=("0"+m).slice(-2);
-
-      let opt = document.createElement("option");
-
+      const hh = ("0"+h).slice(-2);
+      const mm = ("0"+m).slice(-2);
+      const opt = document.createElement("option");
       opt.value = hh + ":" + mm;
       opt.textContent = hh + ":" + mm;
-
       timeSelect.appendChild(opt);
     }
   }
-}
+  
+  // 今日以降の日付しか選べないようにする（親切設計）
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('date').min = today;
+};
 
-function sendReserve(){
+// 予約送信処理
+async function sendReserve(){
+  const msgEl = document.getElementById("msg");
+  const btnEl = document.getElementById("submit-btn");
+  
+  // 入力値の取得
+  const name = document.getElementById("name").value.trim();
+  const tel = document.getElementById("tel").value.trim();
+  const menu = document.getElementById("menu").value;
+  const staff = document.getElementById("staff").value;
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
 
-  const form = document.createElement("form");
-
-  form.method = "POST";
-
-  form.action =
-  "https://script.google.com/macros/s/AKfycbwtDBT9tb55WWyKXu6jVkaDzmJW6bWeNaXhYeN9Lq0xxNNq20nwI_euMJq_2QV_m4Y/exec";
-
-  form.target = "hidden_iframe";
-
-  const data = {
-
-    name:document.getElementById("name").value,
-
-    tel:document.getElementById("tel").value,
-
-    menu:document.getElementById("menu").value,
-
-    staff:document.getElementById("staff").value,
-
-    date:document.getElementById("date").value,
-
-    time:document.getElementById("time").value
-  };
-
-  for(let key in data){
-
-    const input = document.createElement("input");
-
-    input.type = "hidden";
-
-    input.name = key;
-
-    input.value = data[key];
-
-    form.appendChild(input);
+  if(!name || !tel || !date) {
+    msgEl.className = "";
+    msgEl.innerText = "名前、電話番号、日付を入力してください。";
+    return;
   }
 
-  document.body.appendChild(form);
+  // ボタンを無効化して連打を防止
+  btnEl.disabled = true;
+  msgEl.className = "";
+  msgEl.innerText = "予約処理中...";
 
-  form.submit();
+  // GASの新しいWebアプリURLに書き換えてください
+  const gasUrl = "code,gsのアドレスを入力、最後がexecになってるか確認";
 
-  document.getElementById("msg").innerText =
-  "予約完了しました";
+  // データを送るための準備
+  const formData = new URLSearchParams();
+  formData.append("name", name);
+  formData.append("tel", tel);
+  formData.append("menu", menu);
+  formData.append("staff", staff);
+  formData.append("date", date);
+  formData.append("time", time);
+
+  try {
+    // GASにデータを送信
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    });
+
+    const resultText = await response.text();
+    msgEl.innerText = resultText;
+
+    if(resultText.includes("完了")) {
+      msgEl.className = "success";
+      // 予約完了したら入力をクリア
+      document.getElementById("name").value = "";
+      document.getElementById("tel").value = "";
+    }
+
+  } catch(e) {
+    msgEl.className = "";
+    msgEl.innerText = "通信エラーが発生しました。";
+  } finally {
+    btnEl.disabled = false;
+  }
 }
-
 </script>
-
 </body>
 </html>
