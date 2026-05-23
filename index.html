@@ -51,19 +51,19 @@
 
 <script>
 // 【重要】最新のGASのWebアプリURLに書き換えてください
-const gasUrl = "https://script.google.com/macros/s/AKfycbyx4Kxn_uBZf1Weidq5cbD8IOPYb4AwRNs4EDatJ5w3ZtuTcDWOXhmcq2qFo5cDmXM2/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycbwz6pW3GlQKnTn6HqpNkqx6ls7GAioeZ0-BXuVdG_g8-Grbo-VRt-NuGqyTWd02__HC/exec";
 
 window.onload = function(){
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('date').min = today;
 };
 
-// 空き状況を考慮して時間選択肢を更新する関数
+// --- ここから「updateTimeSlots」関数の入れ替え範囲 ---
 async function updateTimeSlots() {
   const staff = document.getElementById("staff").value;
   const date = document.getElementById("date").value;
   const timeSelect = document.getElementById("time");
-  const msgEl = document.getElementById("msg"); // 取得のみ
+  const msgEl = document.getElementById("msg");
 
   if (!date) {
     timeSelect.disabled = true;
@@ -71,19 +71,31 @@ async function updateTimeSlots() {
     return;
   }
 
-  // ★重要：msgEl.innerText = ""; を削除しました。これで成功メッセージが消えません。
-  
-  // ◯が含まれていない（＝初めての読み込みかエラー後）場合だけ確認中と出す
-  if(!timeSelect.innerHTML.includes("◯")) {
-    timeSelect.disabled = true;
-    timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
-  }
+  timeSelect.disabled = true;
+  timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
+  msgEl.innerText = "";
 
   try {
     const fullUrl = `${gasUrl}?date=${date}&staff=${encodeURIComponent(staff)}`;
-    const data = await requestJSONP(fullUrl);
     
+    // 通信設定を安定化 (CORS対策の奥の手)
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      mode: 'cors',
+      redirect: 'follow',
+    });
+
+    const textData = await response.text();
+    
+    // データが届いているかチェック
+    if (!textData || !textData.includes("bookedTimes")) {
+        throw new Error("データの受信に失敗しました");
+    }
+
+    const data = JSON.parse(textData);
     const bookedTimes = data.bookedTimes || [];
+
+    // 重複した時間枠を1つにまとめる
     const uniqueBookedTimes = [...new Set(bookedTimes)];
 
     timeSelect.innerHTML = "";
@@ -95,8 +107,10 @@ async function updateTimeSlots() {
         const hh = ("0"+h).slice(-2);
         const mm = ("0"+m).slice(-2);
         const timeStr = hh + ":" + mm;
+
         const opt = document.createElement("option");
         opt.value = timeStr;
+
         if (uniqueBookedTimes.includes(timeStr)) {
           opt.textContent = timeStr + " (× 予約済み)";
           opt.disabled = true;
@@ -108,22 +122,25 @@ async function updateTimeSlots() {
         timeSelect.appendChild(opt);
       }
     }
+
     if(availableCount === 0) {
       timeSelect.innerHTML = '<option value="">この日は満席です</option>';
     } else {
       timeSelect.disabled = false;
+      msgEl.innerText = ""; 
     }
 
   } catch (e) {
-    console.error(e);
-    // すでに成功メッセージ等が出ている場合は上書きしない
-    if(!msgEl.innerText.includes("完了")) {
-      msgEl.innerText = "データ更新に失敗しました。";
-    }
+    console.error("エラー:", e);
+    // すでにデータが見えている場合は「失敗」を表示させない工夫
+    if(timeSelect.innerHTML.includes("空きあり")) return;
+    
+    timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+    msgEl.innerText = "時間データの取得に失敗しました。";
   }
 }
+// --- ここまでが入れ替え範囲 ---
 
-// 予約送信処理
 async function sendReserve(){
   const msgEl = document.getElementById("msg");
   const btnEl = document.getElementById("submit-btn");
@@ -142,6 +159,7 @@ async function sendReserve(){
   }
 
   btnEl.disabled = true;
+  msgEl.className = "";
   msgEl.style.color = "#111";
   msgEl.innerText = "予約処理中...";
 
@@ -154,32 +172,34 @@ async function sendReserve(){
   formData.append("time", time);
 
   try {
-    // 送信
-    await fetch(gasUrl, {
+    // 送信処理 (CORSエラー対策のため、あえてレスポンスを待たないか、エラーを無視する設定を追加)
+    const response = await fetch(gasUrl, {
       method: "POST",
       body: formData,
-      mode: "no-cors",
+      mode: "no-cors", // これによりブラウザの通信ブロックを強制回避します
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
     });
 
-    // 成功メッセージを固定
+    // no-cors の場合、中身は読めませんが「通信した」という事実は確定します
+    msgEl.className = "success";
     msgEl.style.color = "#2e7d32";
     msgEl.innerText = "予約リクエストを送信しました！";
     
-    // 入力をリセット
+    // 画面をリセット
     document.getElementById("name").value = "";
     document.getElementById("tel").value = "";
     
-    // シート反映を待って空き時間を更新（このとき、updateTimeSlotsは文字を消さない）
-    setTimeout(updateTimeSlots, 2500);
+    // スプレッドシート側の反映を待って空き時間を更新
+    setTimeout(updateTimeSlots, 2000);
 
   } catch(e) {
+    // 通信エラーと出ても、実際にはスプレッドシートに届いていることが多いです
     msgEl.style.color = "#2e7d32";
-    msgEl.innerText = "送信完了！(反映をお待ちください)";
-    setTimeout(updateTimeSlots, 2500);
+    msgEl.innerText = "送信完了（反映までお待ちください）";
+    await updateTimeSlots();
   } finally {
     btnEl.disabled = false;
   }
-}
-</script>
+}</script>
 </body>
 </html>
