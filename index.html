@@ -21,29 +21,29 @@
   <h1>店名 予約</h1>
   <form id="reservationForm">
     <label for="name">お名前</label>
-    <input id="name" placeholder="氏名" required>
+    <input id="name" name="name" placeholder="氏名" required>
     
     <label for="tel">電話番号</label>
-    <input id="tel" type="tel" placeholder="09012345678" required>
+    <input id="tel" name="tel" type="tel" placeholder="09012345678" required>
 
     <label for="email">メールアドレス</label>
-    <input id="email" type="email" placeholder="example@mail.com" required>
+    <input id="email" name="email" type="email" placeholder="example@mail.com" required>
     
     <label for="menu">メニュー</label>
-    <select id="menu" onchange="updateTimeSlots()">
+    <select id="menu" name="menu" onchange="updateTimeSlots()">
       <option>メニュー1</option><option>メニュー2</option><option>メニュー3</option>
     </select>
 
     <label for="staff">スタイリスト</label>
-    <select id="staff" onchange="updateTimeSlots()">
+    <select id="staff" name="staff" onchange="updateTimeSlots()">
       <option>指名なし</option><option>下鶴</option><option>来馬</option><option>矢野</option>
     </select>
 
     <label for="date">ご希望日</label>
-    <input type="date" id="date" onchange="updateTimeSlots()" required>
+    <input type="date" id="date" name="date" onchange="updateTimeSlots()" required>
 
     <label for="time">ご希望時間</label>
-    <select id="time" disabled><option value="">日付とスタイリストを選んでください</option></select>
+    <select id="time" name="time" disabled><option value="">日付とスタイリストを選んでください</option></select>
 
     <button type="submit" id="submit-btn">予約する</button>
   </form>
@@ -53,7 +53,6 @@
 <script>
 const gasUrl = "https://script.google.com/macros/s/AKfycbx3o-5cL7BZeM7S1wypcltv2kgWW8ANk-9fhNLPFwBG0WIZeX4yoqaWnY7bDwSpQTuS/exec";
 
-// 読み込み時にキャッシュから入力内容を復元
 window.onload = function(){
   document.getElementById('date').min = new Date().toISOString().split('T')[0];
   const saved = localStorage.getItem('blnc_customer_data');
@@ -65,13 +64,11 @@ window.onload = function(){
   }
 };
 
-// 予約送信とキャッシュ保存
 document.getElementById('reservationForm').onsubmit = async function(e) {
   e.preventDefault();
   const btn = document.getElementById("submit-btn");
   const msg = document.getElementById("msg");
   
-  // キャッシュに保存
   const customerData = {
     name: document.getElementById('name').value,
     tel: document.getElementById('tel').value,
@@ -82,14 +79,19 @@ document.getElementById('reservationForm').onsubmit = async function(e) {
   btn.disabled = true;
   msg.innerText = "予約処理中...";
 
-  const formData = new FormData(this);
   try {
-    await fetch(gasUrl, { method: "POST", body: formData, mode: "no-cors" });
+    // URLSearchParamsを使用してデータを確実に送信
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      body: new URLSearchParams(new FormData(this))
+    });
+    
     msg.style.color = "#2e7d32";
     msg.innerText = "予約が完了しました！";
     setTimeout(() => { msg.innerText = ""; updateTimeSlots(); }, 3000);
   } catch(e) {
-    msg.innerText = "通信エラーが発生しました。";
+    msg.style.color = "#d32f2f";
+    msg.innerText = "送信に失敗しました。";
   } finally { btn.disabled = false; }
 };
 
