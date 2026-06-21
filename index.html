@@ -54,7 +54,7 @@
 </div>
 
 <script>
-const gasUrl = "https://script.google.com/macros/s/AKfycbzQMMIb5vnYtGh9Bz31rTsOhLb5uexOPsozoFqZcKv6C73aB06UAShfuZjfYIfuEMEF/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycbxR0eeYnfvCnEtYY3syfjN0PBGwTKN6WOYPxkL0sibbWvBejX1RyyUQJUApPf5gFsic/exec";
 
 window.onload = function(){
   document.getElementById('date').min = new Date().toISOString().split('T')[0];
@@ -109,19 +109,51 @@ async function updateTimeSlots() {
     const res = await fetch(`${gasUrl}?date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`);
     const data = await res.json();
     timeSelect.innerHTML = "";
-    for(let h=9; h<=18; h++) {
-      for(let m=0; m<60; m+=30) {
-        if(h==18 && m>0) continue;
-        const timeStr = ("0"+h).slice(-2) + ":" + ("0"+m).slice(-2);
-        if(!data.bookedTimes.includes(timeStr)) {
-          const opt = document.createElement("option");
-          opt.value = timeStr; opt.textContent = timeStr;
-          timeSelect.appendChild(opt);
+    
+    // 1. 定休日判定 (status属性のチェック)
+    if (data.status === "REGULAR_HOLIDAY") {
+      const opt = document.createElement("option");
+      opt.textContent = "定休日";
+      opt.value = "";
+      timeSelect.appendChild(opt);
+      timeSelect.disabled = true;
+      return;
+    }
+    
+    // 2. 通常の時間枠の生成
+    if (data.bookedTimes && Array.isArray(data.bookedTimes)) {
+      for(let h=9; h<=18; h++) {
+        for(let m=0; m<60; m+=30) {
+          if(h==18 && m>0) continue;
+          const timeStr = ("0"+h).slice(-2) + ":" + ("0"+m).slice(-2);
+          if(!data.bookedTimes.includes(timeStr)) {
+            const opt = document.createElement("option");
+            opt.value = timeStr; opt.textContent = timeStr;
+            timeSelect.appendChild(opt);
+          }
         }
       }
     }
-    timeSelect.disabled = timeSelect.options.length === 0;
-  } catch(e) { console.error(e); }
+    
+    // 3. 時間枠が0件だった場合（満席 または 公休）の判定
+    if (timeSelect.options.length === 0) {
+      const opt = document.createElement("option");
+      if (staff !== "指名なし") {
+        opt.textContent = "公休";
+      } else {
+        opt.textContent = "満席";
+      }
+      opt.value = "";
+      timeSelect.appendChild(opt);
+      timeSelect.disabled = true;
+    } else {
+      timeSelect.disabled = false;
+    }
+  } catch(e) { 
+    console.error(e); 
+    timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+    timeSelect.disabled = true;
+  }
 }
 </script>
 </body>
