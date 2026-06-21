@@ -111,6 +111,7 @@ async function updateTimeSlots() {
     const data = await res.json();
     timeSelect.innerHTML = "";
     
+    // 1. 定休日判定 (全体定休)
     if (data.status === "REGULAR_HOLIDAY") {
       const opt = document.createElement("option");
       opt.textContent = "定休日";
@@ -119,7 +120,18 @@ async function updateTimeSlots() {
       timeSelect.disabled = true;
       return;
     }
+
+    // 2. 個人のシフト公休判定
+    if (data.status === "STAFF_OFF") {
+      const opt = document.createElement("option");
+      opt.textContent = "公休";
+      opt.value = "";
+      timeSelect.appendChild(opt);
+      timeSelect.disabled = true;
+      return;
+    }
     
+    // 3. 通常の時間枠の生成
     let availableCount = 0;
     if (data.bookedTimes && Array.isArray(data.bookedTimes)) {
       for(let h=9; h<=18; h++) {
@@ -141,16 +153,11 @@ async function updateTimeSlots() {
       }
     }
     
+    // 4. すべての時間枠が埋まっていた場合の判定
     if (availableCount === 0) {
       timeSelect.innerHTML = "";
       const opt = document.createElement("option");
-      
-      if (data.bookedTimes && data.bookedTimes.length > 0) {
-        opt.textContent = "満席";
-      } else {
-        opt.textContent = (staff !== "指名なし") ? "公休" : "満席";
-      }
-      
+      opt.textContent = "満席";
       opt.value = "";
       timeSelect.appendChild(opt);
       timeSelect.disabled = true;
