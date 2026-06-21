@@ -12,6 +12,8 @@
     input, select, button { width: 100%; padding: 12px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
     button { background: #111; color: #fff; border: none; cursor: pointer; margin-top: 15px; }
     button:disabled { background: #ccc; }
+    /* ↓ グレーアウトした選択肢を見やすくするためのスタイル設定 */
+    select option:disabled { color: #aaa; background: #f0f0f0; }
     #msg { margin-top: 15px; text-align: center; font-weight: bold; color: #d32f2f; }
   </style>
 </head>
@@ -120,23 +122,33 @@ async function updateTimeSlots() {
       return;
     }
     
-    // 2. 通常の時間枠の生成
+    // 2. 通常の時間枠の生成（グレーアウト対応版）
+    let availableCount = 0; // 実際に選択できる枠があるかカウント
     if (data.bookedTimes && Array.isArray(data.bookedTimes)) {
       for(let h=9; h<=18; h++) {
         for(let m=0; m<60; m+=30) {
           if(h==18 && m>0) continue;
           const timeStr = ("0"+h).slice(-2) + ":" + ("0"+m).slice(-2);
-          if(!data.bookedTimes.includes(timeStr)) {
-            const opt = document.createElement("option");
-            opt.value = timeStr; opt.textContent = timeStr;
-            timeSelect.appendChild(opt);
+          const opt = document.createElement("option");
+          opt.value = timeStr;
+          
+          // GASのブロックリストに含まれている（＝予約不可）の場合
+          if(data.bookedTimes.includes(timeStr)) {
+            opt.textContent = `${timeStr} (受付終了)`;
+            opt.disabled = true;
+          } else {
+            // 予約可能な場合
+            opt.textContent = timeStr;
+            availableCount++;
           }
+          timeSelect.appendChild(opt);
         }
       }
     }
     
-    // 3. 時間枠が0件だった場合（満席 または 公休）の判定
-    if (timeSelect.options.length === 0) {
+    // 3. 時間枠がすべてdisabled、または0件だった場合（全枠満席 または 公休）の判定
+    if (availableCount === 0) {
+      timeSelect.innerHTML = ""; // 生成したすべてのdisabled枠をクリアして専用文字を出す
       const opt = document.createElement("option");
       if (staff !== "指名なし") {
         opt.textContent = "公休";
