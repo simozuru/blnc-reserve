@@ -35,10 +35,7 @@
     
     <label for="menu">メニュー</label>
     <select id="menu" name="menu" onchange="updateTimeSlots()">
-      <option>カット</option>
-      <option>ヘアカラー</option>
-      <option>パーマ</option>
-      <option>縮毛矯正</option>
+      <option>メニュー1</option><option>メニュー2</option><option>メニュー3</option>
     </select>
 
     <label for="staff">スタイリスト</label>
@@ -58,7 +55,7 @@
 </div>
 
 <script>
-const gasUrl = "https://script.google.com/macros/s/AKfycbxR0eeYnfvCnEtYY3syfjN0PBGwTKN6WOYPxkL0sibbWvBejX1RyyUQJUApPf5gFsic/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycbwv6mvtMHdwjjXI4Bv0m6b5O4Lay0aeqaopXzhWjgwS3v_WCC6lFaDB2Hdqo6zo0KZe/exec";
 
 window.onload = function(){
   document.getElementById('date').min = new Date().toISOString().split('T')[0];
