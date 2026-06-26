@@ -186,14 +186,12 @@
 
 <script>
   // 【重要】デプロイした最新のGASウェブアプリURLをここに貼り付けてください
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzIU3B6l2cAvhw9_6bHBOQsk9n2Fb7wR0rgaKp9DeOJZkbbSmMPo5j46QvRULZAc6dY/exec"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbz8URafQsav0ILxB9vHfvcI70Oi8t-2br8GkhLFND_EM4ZxMgCyCMiEgC1j1Xu9_7-Q/exec"; 
 
-  // 当日以降しか選択できないように制御
   const dateInput = document.getElementById('date');
   const today = new Date().toISOString().split('T')[0];
   dateInput.min = today;
 
-  // localStorageによる顧客情報の復元と自動保存
   const storageKeys = ['name', 'name_kana', 'tel', 'email'];
   storageKeys.forEach(key => {
     const element = document.getElementById(key);
@@ -205,12 +203,10 @@
     });
   });
 
-  // 条件変更時に空き時間を再ロード
   ['date', 'staff', 'menu'].forEach(id => {
     document.getElementById(id).addEventListener('change', loadAvailableTimes);
   });
 
-  // 空き時間スロットの動的取得・生成関数
   function loadAvailableTimes() {
     const date = dateInput.value;
     const staff = document.getElementById('staff').value;
@@ -219,7 +215,6 @@
     const submitButton = document.getElementById('submitButton');
     const timeInput = document.getElementById('time');
 
-    // 初期化
     timeInput.value = '';
     submitButton.disabled = true;
 
@@ -230,7 +225,6 @@
 
     timeGrid.innerHTML = '<div class="loading-msg">空き状況を確認中...</div>';
 
-    // GASへ空き枠状況の問い合わせ
     const fetchUrl = `${GAS_URL}?date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`;
     
     fetch(fetchUrl)
@@ -238,7 +232,6 @@
       .then(data => {
         timeGrid.innerHTML = '';
 
-        // 定休日・スタッフ不在時の制御
         if (data.status === "REGULAR_HOLIDAY" || data.status === "STAFF_OFF") {
           const msg = data.status === "REGULAR_HOLIDAY" ? "本日は定休日（または公休・年末年始休み）です。" : "指定スタッフは本日お休みをいただいております。";
           timeGrid.innerHTML = `<div class="time-slot holiday">${msg}<br>別の日付またはスタッフを選択してください。</div>`;
@@ -246,31 +239,28 @@
         }
 
         const unavailableTimes = data.bookedTimes || [];
-        
-        // 当日の場合は過ぎた時間を非表示にするための計算
         const now = new Date();
         const isToday = (date === now.toISOString().split('T')[0]);
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        // 営業スロット（固定枠ベースからGAS側の動的変化へ追従するためのベース生成）
-        // ※GAS側 BUSINESS_HOURSの最大値[9:00〜19:00]をカバーする配列
         let hasVisibleSlot = false;
+
+        // 9:00 から 19:00 までのスロットを生成してGASの判定をそのままマッピング
         for (let h = 9; h <= 19; h++) {
           for (let m = 0; m < 60; m += 30) {
+            if (h === 19 && m > 0) continue; // 19:00ちょうどまで生成
+            
             let slot = ("0" + h).slice(-2) + ":" + ("0" + m).slice(-2);
             
-            // 当日の過去時間を足切り
+            // 当日の過去時間をスキップ
             if (isToday && (h * 60 + m) <= currentMinutes + 30) continue;
-
-            // GAS側 BUSINESS_HOURS から対象外（初期化すらされていない）時間はスキップ
-            // これにより曜日別の異なる営業時間に完全対応
-            if (unavailableTimes.includes(slot) === false && data.bookedTimes === undefined) continue;
 
             hasVisibleSlot = true;
             const cell = document.createElement('div');
             cell.className = 'time-slot';
             cell.innerText = slot;
 
+            // GAS側の予約不可（または営業時間外）リストに含まれている場合は「満席」扱いにする
             if (unavailableTimes.includes(slot)) {
               cell.classList.add('disabled');
               cell.innerText += ' (満席)';
@@ -279,7 +269,7 @@
                 document.querySelectorAll('.time-slot').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');
                 timeInput.value = slot;
-                submitButton.disabled = false; // 時間選択されて初めてボタンが有効化
+                submitButton.disabled = false;
               });
             }
             timeGrid.appendChild(cell);
@@ -296,7 +286,6 @@
       });
   }
 
-  // 確定直前ダブルブッキング防止ロジック対応のフォーム送信
   document.getElementById('reservationForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -323,7 +312,7 @@
       } else if (result === "満席エラー") {
         alert("申し訳ございません。\nタッチの差で該当の時間帯が満席、またはスタッフが不在となりました。\nお手数ですが、別の日時を選択し直してください。");
         submitButton.innerText = '予約を確定する';
-        loadAvailableTimes(); // 空き状況を強制再読み込みして選択肢を更新
+        loadAvailableTimes();
       } else {
         alert("予約処理中にシステムエラーが発生しました。\n" + result);
         submitButton.disabled = false;
