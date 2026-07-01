@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 2.0</title>
+  <title>SIS Web Reservation - ver 2.1</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -35,7 +35,7 @@
 
 <div class="container">
   <h1>ヘアサロン Blnc</h1>
-  <div class="subtitle">WEB予約システム (SIS prototype ver 2.0)</div>
+  <div class="subtitle">WEB予約システム (SIS prototype ver 2.1)</div>
   
   <form id="reservationForm">
     <div class="form-group">
@@ -122,11 +122,20 @@
   const submitBtn = document.getElementById('submitBtn');
   const loading = document.getElementById('loading');
 
-  // 今日以降の日付しか選べないように制限
+  // 【キャッシュ機能】ページ読み込み時にローカルストレージから前回入力を復元
+  window.addEventListener('DOMContentLoaded', () => {
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      const savedValue = localStorage.getItem(`sis_${field}`);
+      if (savedValue) {
+        document.getElementById(field).value = savedValue;
+      }
+    });
+  });
+
   const today = new Date().toISOString().split('T')[0];
   dateInput.min = today;
 
-  // 日付・スタッフ・メニューが変更されたら、裏側のGAS（doGet）から空き時間を取得する
   [dateInput, staffSelect, menuSelect].forEach(element => {
     element.addEventListener('change', fetchAvailableTimes);
   });
@@ -147,28 +156,44 @@
       const data = await response.json();
 
       if (data.success) {
-        // 9:00〜19:00までの全スロットを生成し、不可リストに入っていない時間をドロップダウンに追加
         timeSelect.innerHTML = '';
+        
+        // 定休日の場合の完全ブロック対応
+        if (data.isShopHoliday) {
+          timeSelect.innerHTML = '<option value="">本日は定休日（または特別休業日）です</option>';
+          submitBtn.disabled = true;
+          return;
+        }
+
         let hasSlot = false;
         
-        // 営業時間の最大幅（9:00〜19:00）で選択肢を生成
+        // 9:00〜19:00の選択肢を生成
         for (let h = 9; h < 19; h++) {
           const hours = String(h).padStart(2, '0');
           ['00', '30'].forEach(m => {
             const timeStr = `${hours}:${m}`;
-            // 不可リスト（unavailableTimes）に含まれていなければ選択肢として表示
-            if (!data.unavailableTimes.includes(timeStr)) {
-              const opt = document.createElement('option');
-              opt.value = timeStr;
-              opt.textContent = timeStr;
-              timeSelect.appendChild(opt);
+            
+            // 不可リストから該当する時間があるか探す
+            const matchHoliday = data.unavailableTimes.find(t => t.startsWith(timeStr));
+
+            const opt = document.createElement('option');
+            opt.value = timeStr;
+
+            if (matchHoliday) {
+              // 理由が埋まっている場合は、選択不可(disabled)にして理由を表示
+              const reason = matchHoliday.split('|')[1] || "受付不可";
+              opt.textContent = `${timeStr} (× ${reason})`;
+              opt.disabled = true;
+            } else {
+              opt.textContent = `${timeStr} (○ 空きあり)`;
               hasSlot = true;
             }
+            timeSelect.appendChild(opt);
           });
         }
 
         if (!hasSlot) {
-          timeSelect.innerHTML = '<option value="">定休日、または満席です</option>';
+          timeSelect.innerHTML = '<option value="">本日はすべての時間帯で満席です</option>';
           submitBtn.disabled = true;
         } else {
           submitBtn.disabled = false;
@@ -182,12 +207,17 @@
     }
   }
 
-  // 予約確定ボタンが押された時の処理（doPostへの送信）
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     submitBtn.disabled = true;
     loading.style.display = 'block';
+
+    // 【キャッシュ機能】送信直前に入力内容をローカルストレージに保存
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
+    });
 
     const formData = new URLSearchParams();
     formData.append('date', dateInput.value);
@@ -213,6 +243,7 @@
 
       if (data.success) {
         alert('ご予約が完了しました！確定メールをご確認ください。');
+        // フォームはリセットするが、次回以降はキャッシュから自動読込されます
         form.reset();
         timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       } else {
@@ -220,7 +251,7 @@
         submitBtn.disabled = false;
       }
     } catch (error) {
-      alert('通信エラーが発生しました。通信環境の良い場所で再度お試しください。');
+      alert('通信エラーが発生しました。');
       submitBtn.disabled = false;
     } finally {
       loading.style.display = 'none';
