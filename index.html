@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 2.1</title>
+  <title>SIS Web Reservation - ver 2.5</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -35,7 +35,7 @@
 
 <div class="container">
   <h1>ヘアサロン Blnc</h1>
-  <div class="subtitle">WEB予約システム (SIS prototype ver 2.1)</div>
+  <div class="subtitle">WEB予約システム (SIS prototype ver 2.5)</div>
   
   <form id="reservationForm">
     <div class="form-group">
@@ -112,7 +112,7 @@
 
 <script>
   // ★ここに新しいGASのウェブアプリURLを貼り付けてください★
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyPqZP3H0-yT3xoq0FGJeTbZSL9vJ__Zw5e9zOLWT_ErsSpW3IRSDGKUgRLBSinEpkq/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxbCkZHzS8623-DzyVEbJyet3uKdjUCxFiVHbZ_VnqD923sqtcUea1MvjjQ4MVEEUk/exec";
 
   const dateInput = document.getElementById('date');
   const staffSelect = document.getElementById('staff');
@@ -122,7 +122,7 @@
   const submitBtn = document.getElementById('submitBtn');
   const loading = document.getElementById('loading');
 
-  // 【キャッシュ機能】ページ読み込み時にローカルストレージから前回入力を復元
+  // キャッシュ復元機能
   window.addEventListener('DOMContentLoaded', () => {
     const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
     fields.forEach(field => {
@@ -165,7 +165,8 @@
           return;
         }
 
-        let hasSlot = false;
+        let hasAvailableSlot = false; // 実際に選べる（○）枠があるか
+        let hasAnySlot = false;      // 表示する選択肢自体が1つでもあるか
         
         // 9:00〜19:00の選択肢を生成
         for (let h = 9; h < 19; h++) {
@@ -180,21 +181,29 @@
             opt.value = timeStr;
 
             if (matchHoliday) {
-              // 理由が埋まっている場合は、選択不可(disabled)にして理由を表示
+              // 💡お休みや満席の理由を綺麗に横に添える（選択は不可）
               const reason = matchHoliday.split('|')[1] || "受付不可";
               opt.textContent = `${timeStr} (× ${reason})`;
               opt.disabled = true;
             } else {
               opt.textContent = `${timeStr} (○ 空きあり)`;
-              hasSlot = true;
+              hasAvailableSlot = true;
             }
             timeSelect.appendChild(opt);
+            hasAnySlot = true;
           });
         }
 
-        if (!hasSlot) {
-          timeSelect.innerHTML = '<option value="">本日はすべての時間帯で満席です</option>';
+        // 💡【修正ポイント】選べる枠がゼロ（全員公休や全員満席）でも、ドロップダウン自体は壊さず、確定ボタンだけをロックする
+        if (!hasAvailableSlot) {
           submitBtn.disabled = true;
+          // もし全時間帯が同じ理由（例：終日公休など）で埋まっている形なら、ドロップダウンの先頭に案内を出す
+          const noticeOpt = document.createElement('option');
+          noticeOpt.value = "";
+          noticeOpt.textContent = "指定日はご予約いただけません（各時間帯の理由をご確認ください）";
+          noticeOpt.selected = true;
+          noticeOpt.disabled = true;
+          timeSelect.insertBefore(noticeOpt, timeSelect.firstChild);
         } else {
           submitBtn.disabled = false;
         }
@@ -209,11 +218,9 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     submitBtn.disabled = true;
     loading.style.display = 'block';
 
-    // 【キャッシュ機能】送信直前に入力内容をローカルストレージに保存
     const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
     fields.forEach(field => {
       localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
@@ -235,15 +242,11 @@
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       const data = await response.json();
-
       if (data.success) {
         alert('ご予約が完了しました！確定メールをご確認ください。');
-        // フォームはリセットするが、次回以降はキャッシュから自動読込されます
         form.reset();
         timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       } else {
