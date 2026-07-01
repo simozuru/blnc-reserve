@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 2.7</title>
+  <title>SIS Web Reservation - ver 2.8</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -35,7 +35,7 @@
 
 <div class="container">
   <h1>ヘアサロン Blnc</h1>
-  <div class="subtitle">WEB予約システム (SIS prototype ver 2.7)</div>
+  <div class="subtitle">WEB予約システム (SIS prototype ver 2.8)</div>
   
   <form id="reservationForm">
     <div class="form-group">
@@ -164,30 +164,39 @@
           return;
         }
 
-        // 2. 終日お休みの判定（タイポを修正しました）
-        let totalSlotsCount = 0;
-        let blockReasons = [];
-        
+        // 1. 各時間枠のデータを一時的に配列に集める
+        const slotResults = [];
+        let hasAvailableSlot = false;
+        let detectedReasons = [];
+
         for (let h = 9; h < 19; h++) {
-          const hours = String(h).padStart(2, '0'); // ←ここを正しく修正
+          const hours = String(h).padStart(2, '0');
           ['00', '30'].forEach(m => {
             const timeStr = `${hours}:${m}`;
-            totalSlotsCount++;
-            const match = data.unavailableTimes.find(t => t.startsWith(timeStr));
-            if (match) {
-              blockReasons.push(match.split('|')[1]);
+            const matchHoliday = data.unavailableTimes.find(t => t.startsWith(timeStr));
+
+            if (matchHoliday) {
+              const reason = matchHoliday.split('|')[1] || "受付不可";
+              slotResults.push({ time: timeStr, available: false, reason: reason });
+              if (!detectedReasons.includes(reason)) {
+                detectedReasons.push(reason);
+              }
+            } else {
+              slotResults.push({ time: timeStr, available: true, reason: "" });
+              hasAvailableSlot = true;
             }
           });
         }
 
-        const allSameReason = blockReasons.length === totalSlotsCount && blockReasons.every(r => r === blockReasons[0]);
-        
-        if (allSameReason) {
-          const mainReason = blockReasons[0];
+        // 2. 【新・判定ロジック】もし選べる枠が「1つも無い」場合
+        if (!hasAvailableSlot) {
           const opt = document.createElement('option');
           opt.value = "";
           opt.disabled = true;
           opt.selected = true;
+
+          // 代表的な理由を1つ取得
+          const mainReason = detectedReasons[0] || "満席";
 
           if (mainReason === "公休") {
             opt.textContent = `【 ${staff} 】は本日公休をいただいております`;
@@ -201,10 +210,79 @@
 
           timeSelect.appendChild(opt);
           submitBtn.disabled = true;
-          return;
+          return; // ここで終了
         }
 
-        // 3. 通常の30分刻み展開
-        let hasAvailableSlot = false;
-        
-        for (let h = 9; h < 19; h++) {
+        // 3. 選べる枠がある（または半休など一部だけ埋まっている）場合は、通常通り30分刻みで展開
+        slotResults.forEach(slot => {
+          const opt = document.createElement('option');
+          opt.value = slot.time;
+
+          if (!slot.available) {
+            opt.textContent = `${slot.time} (× ${slot.reason})`;
+            opt.disabled = true;
+          } else {
+            opt.textContent = `${slot.time} (○ 空きあり)`;
+          }
+          timeSelect.appendChild(opt);
+        });
+
+        submitBtn.disabled = false;
+
+      } else {
+        timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+      }
+    } catch (error) {
+      console.error(error);
+      timeSelect.innerHTML = '<option value="">通信エラーが発生しました</option>';
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    loading.style.display = 'block';
+
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
+    });
+
+    const formData = new URLSearchParams();
+    formData.append('date', dateInput.value);
+    formData.append('time', timeSelect.value);
+    formData.append('staff', staffSelect.value);
+    formData.append('menu', menuSelect.value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('name_kana', document.getElementById('name_kana').value);
+    formData.append('tel', document.getElementById('tel').value);
+    formData.append('email', document.getElementById('email').value);
+    formData.append('birthday', document.getElementById('birthday').value);
+    formData.append('memo', document.getElementById('memo').value);
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('ご予約が完了しました！確定メールをご確認ください。');
+        form.reset();
+        timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
+      } else {
+        alert('予約に失敗しました: ' + data.message);
+        submitBtn.disabled = false;
+      }
+    } catch (error) {
+      alert('通信エラーが発生しました。');
+      submitBtn.disabled = false;
+    } finally {
+      loading.style.display = 'none';
+    }
+  });
+</script>
+
+</body>
+</html>
