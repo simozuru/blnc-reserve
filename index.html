@@ -123,4 +123,182 @@
   const loading = document.getElementById('loading');
 
   // キャッシュ復元
-  window.
+  window.addEventListener('DOMContentLoaded', () => {
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      const savedValue = localStorage.getItem(`sis_${field}`);
+      if (savedValue) {
+        document.getElementById(field).value = savedValue;
+      }
+    });
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  dateInput.min = today;
+
+  [dateInput, staffSelect, menuSelect].forEach(element => {
+    element.addEventListener('change', fetchAvailableTimes);
+  });
+
+  async function fetchAvailableTimes() {
+    const date = dateInput.value;
+    const staff = staffSelect.value;
+    const menu = menuSelect.value;
+
+    if (!date) return;
+
+    timeSelect.innerHTML = '<option value="">空き時間を計算中...</option>';
+    submitBtn.disabled = true;
+
+    try {
+      const url = `${GAS_WEB_APP_URL}?method=getUnavailable&date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        timeSelect.innerHTML = '';
+        
+        if (data.isShopHoliday) {
+          timeSelect.innerHTML = '<option value="">本日は定休日（または特別休業日）です</option>';
+          submitBtn.disabled = true;
+          return;
+        }
+
+        const slotResults = [];
+        let hasAvailableSlot = false;
+        let totalSlotsCount = 0;
+
+        // 9:00 から 18:30 までのコマを生成して判定
+        for (let h = 9; h < 19; h++) {
+          const hours = String(h).padStart(2, '0');
+          ['00', '30'].forEach(m => {
+            const timeStr = `${hours}:${m}`;
+            totalSlotsCount++;
+            
+            // GASから明示的にNG理由（営業時間外、予約あり等）が返ってきているか探す
+            const matchHoliday = data.unavailableTimes.find(t => t.startsWith(timeStr));
+
+            if (matchHoliday) {
+              const reason = matchHoliday.split('|')[1] || "受付不可";
+              slotResults.push({ time: timeStr, available: false, reason: reason });
+            } else {
+              // ⚠️ GASのリストに無く、かつ18時閉店以降の時間（18:00, 18:30）の場合は強制的に営業時間外にする
+              if (h >= 18) {
+                slotResults.push({ time: timeStr, available: false, reason: "営業時間外" });
+              } else {
+                slotResults.push({ time: timeStr, available: true, reason: "" });
+                hasAvailableSlot = true;
+              }
+            }
+          });
+        }
+
+        // 終日ブロックの判定案内
+        const isAllDayBlockedFromBeginning = data.unavailableTimes.length >= totalSlotsCount;
+        const allSameReason = isAllDayBlockedFromBeginning && data.unavailableTimes.every(t => t.split('|')[1] === data.unavailableTimes[0].split('|')[1]);
+
+        if (allSameReason) {
+          const opt = document.createElement('option');
+          opt.value = "";
+          opt.disabled = true;
+          opt.selected = true;
+
+          const mainReason = data.unavailableTimes[0].split('|')[1];
+
+          if (mainReason === "公休") {
+            opt.textContent = `【 ${staff} 】は本日公休をいただいております`;
+          } else if (mainReason === "勉強会のため予約は受け付けしていません") {
+            opt.textContent = `【 ${staff} 】は本日勉強会のため終日ご予約を受け付けておりません`;
+          } else if (mainReason === "満席") {
+            opt.textContent = `本日はすべての時間帯で満席となっております`;
+          } else {
+            opt.textContent = `【 ${staff} 】は本日お休みをいただいております (${mainReason})`;
+          }
+
+          timeSelect.appendChild(opt);
+          submitBtn.disabled = true;
+          return;
+        }
+
+        // 30分刻みのプルダウン展開
+        slotResults.forEach(slot => {
+          const opt = document.createElement('option');
+          opt.value = slot.time;
+
+          if (!slot.available) {
+            opt.textContent = `${slot.time} (× ${slot.reason})`;
+            opt.disabled = true;
+          } else {
+            opt.textContent = `${slot.time} (○ 空きあり)`;
+          }
+          timeSelect.appendChild(opt);
+        });
+
+        if (!hasAvailableSlot) {
+          const noticeOpt = document.createElement('option');
+          noticeOpt.value = "";
+          noticeOpt.textContent = "本日はすべての時間帯で満席となっております";
+          noticeOpt.selected = true;
+          noticeOpt.disabled = true;
+          timeSelect.insertBefore(noticeOpt, timeSelect.firstChild);
+        }
+
+        submitBtn.disabled = !hasAvailableSlot;
+
+      } else {
+        timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+      }
+    } catch (error) {
+      console.error(error);
+      timeSelect.innerHTML = '<option value="">通信エラーが発生しました</option>';
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    loading.style.display = 'block';
+
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
+    });
+
+    const formData = new URLSearchParams();
+    formData.append('date', dateInput.value);
+    formData.append('time', timeSelect.value);
+    formData.append('staff', staffSelect.value);
+    formData.append('menu', menuSelect.value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('name_kana', document.getElementById('name_kana').value);
+    formData.append('tel', document.getElementById('tel').value);
+    formData.append('email', document.getElementById('email').value);
+    formData.append('birthday', document.getElementById('birthday').value);
+    formData.append('memo', document.getElementById('memo').value);
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('ご予約が完了しました！確定メールをご確認ください。');
+        form.reset();
+        timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
+      } else {
+        alert('予約に失敗しました: ' + data.message);
+        submitBtn.disabled = false;
+      }
+    } catch (error) {
+      alert('通信エラーが発生しました。');
+      submitBtn.disabled = false;
+    } finally {
+      loading.style.display = 'none';
+    }
+  });
+</script>
+
+</body>
+</html>
