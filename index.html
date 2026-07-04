@@ -3,321 +3,299 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blnc オンライン予約システム</title>
+  <title>SIS Web Reservation - ver 3.0</title>
   <style>
     :root {
-      --primary-color: #2c3e50;
-      --accent-color: #e74c3c;
+      --primary-color: #4a4a4a;
+      --accent-color: #9a8873;
       --bg-color: #f8f9fa;
       --card-bg: #ffffff;
       --text-color: #333333;
       --border-color: #dddddd;
     }
-    body {
-      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      line-height: 1.6;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 30px;
-      font-size: 24px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-      color: var(--primary-color);
-    }
-    input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-    input:focus, select:focus {
-      border-color: var(--primary-color);
-      outline: none;
-    }
-    .time-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .time-slot {
-      padding: 10px;
-      text-align: center;
-      background-color: #e9ecef;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .time-slot:hover {
-      background-color: #dee2e6;
-    }
-    .time-slot.selected {
-      background-color: var(--primary-color);
-      color: white;
-      border-color: var(--primary-color);
-    }
-    .time-slot.disabled {
-      background-color: #f8d7da;
-      color: #721c24;
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-    .time-slot.holiday {
-      grid-column: 1 / -1;
-      background-color: #fff3cd;
-      color: #856404;
-      cursor: not-allowed;
-      padding: 20px;
-    }
-    button[type="submit"] {
-      width: 100%;
-      padding: 14px;
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 20px;
-      transition: background-color 0.2s;
-    }
-    button[type="submit"]:hover {
-      background-color: #34495e;
-    }
-    button[type="submit"]:disabled {
-      background-color: #95a5a6;
-      cursor: not-allowed;
-    }
-    .loading-msg {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 20px;
-      color: #666;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; justify-content: center; }
+    .container { max-width: 600px; width: 100%; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    h1 { font-size: 24px; text-align: center; margin-bottom: 5px; color: var(--primary-color); letter-spacing: 1px; }
+    .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 30px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--primary-color); }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 15px; transition: all 0.3s; background-color: #fff; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 5px rgba(154,136,115,0.3); }
+    .row { display: flex; gap: 15px; }
+    .row .form-group { flex: 1; }
+    textarea { resize: vertical; height: 80px; }
+    button { width: 100%; padding: 15px; background-color: var(--accent-color); border: none; border-radius: 6px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+    button:hover { background-color: #837362; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #loading { display: none; text-align: center; color: var(--accent-color); font-weight: bold; margin-top: 15px; font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Blnc 予約フォーム</h1>
+  <h1>ヘアサロン Blnc</h1>
+  <div class="subtitle">WEB予約システム (SIS prototype ver 3.0)</div>
+  
   <form id="reservationForm">
-    
     <div class="form-group">
-      <label for="name">お名前（必須）</label>
-      <input type="text" id="name" name="name" required placeholder="山田 太郎">
+      <label for="date">ご来店希望日</label>
+      <input type="date" id="date" required>
     </div>
 
-    <div class="form-group">
-      <label for="name_kana">フリガナ（必須）</label>
-      <input type="text" id="name_kana" name="name_kana" required placeholder="ヤマダ タロウ">
-    </div>
-
-    <div class="form-group">
-      <label for="tel">電話番号（必須・ハイフン可）</label>
-      <input type="tel" id="tel" name="tel" required placeholder="09012345678">
-    </div>
-
-    <div class="form-group">
-      <label for="email">メールアドレス（任意）</label>
-      <input type="email" id="email" name="email" placeholder="your@email.com">
-    </div>
-
-    <div class="form-group">
-      <label for="staff">スタイリスト指名（必須）</label>
-      <select id="staff" name="staff" required>
-        <option value="指名なし">指名なし（最速の枠をご案内）</option>
-        <option value="下鶴">下鶴</option>
-        <option value="来馬">来馬</option>
-        <option value="矢野">矢野</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="menu">メニュー（必須）</label>
-      <select id="menu" name="menu" required>
-        <option value="カット">カット (60分)</option>
-        <option value="ヘアカラー">ヘアカラー (120分)</option>
-        <option value="パーマ">パーマ (120分)</option>
-        <option value="縮毛矯正">縮毛矯正 (240分)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="date">ご希望日（必須）</label>
-      <input type="date" id="date" name="date" required>
-    </div>
-
-    <div class="form-group">
-      <label>ご希望時間（必須）</label>
-      <input type="hidden" id="time" name="time" required>
-      <div id="timeGrid" class="time-grid">
-        <div class="loading-msg">日付を選択してください</div>
+    <div class="row">
+      <div class="form-group">
+        <label for="staff">担当スタイリスト</label>
+        <select id="staff" required>
+          <option value="指名なし">指名なし（自動割り振り）</option>
+          <option value="下鶴">下鶴</option>
+          <option value="来馬">来馬</option>
+          <option value="矢野">矢野</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="menu">メニュー</label>
+        <select id="menu" required>
+          <option value="カット">カット (60分)</option>
+          <option value="カラー">カラー (120分)</option>
+          <option value="パーマ">パーマ (120分)</option>
+          <option value="縮毛矯正">縮毛矯正 (240分)</option>
+        </select>
       </div>
     </div>
 
-    <button type="submit" id="submitButton" disabled>予約を確定する</button>
+    <div class="form-group">
+      <label for="time">ご希望時間</label>
+      <select id="time" required>
+        <option value="">日付を選択してください</option>
+      </select>
+    </div>
+
+    <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 25px 0;">
+
+    <div class="row">
+      <div class="form-group">
+        <label for="name">お名前（氏名）</label>
+        <input type="text" id="name" placeholder="山田 太郎" required>
+      </div>
+      <div class="form-group">
+        <label for="name_kana">フリガナ</label>
+        <input type="text" id="name_kana" placeholder="ヤマダ タロウ" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="tel">電話番号</label>
+        <input type="tel" id="tel" placeholder="09012345678" required>
+      </div>
+      <div class="form-group">
+        <label for="birthday">誕生日（任意）</label>
+        <input type="date" id="birthday">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="email">メールアドレス</label>
+      <input type="email" id="email" placeholder="example@mail.com" required>
+    </div>
+
+    <div class="form-group">
+      <label for="memo">ご要望・サロンへのメッセージ</label>
+      <textarea id="memo" placeholder="髪の悩みや、当日伝えたいことがあればご記入ください。"></textarea>
+    </div>
+
+    <button type="submit" id="submitBtn">予約を確定する</button>
+    <div id="loading">処理中... しばらくお待ちください</div>
   </form>
 </div>
 
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwfpmThM8LyAGGxBAg8t1mVfepXTsTtG1Da_R-UyQ2ceQ1ltmKh6e0FlKEHwRf_5BZH/exec"; 
+  // ★ここに新しいGASのウェブアプリURLを貼り付けてください★
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzm1DAw3pJc160JcfnHspbk1ZOlmQlNle8DV_fN56hMkCY8jQmhOajt10uwO7ULhIy_/exec";
 
   const dateInput = document.getElementById('date');
+  const staffSelect = document.getElementById('staff');
+  const menuSelect = document.getElementById('menu');
+  const timeSelect = document.getElementById('time');
+  const form = document.getElementById('reservationForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const loading = document.getElementById('loading');
+
+  // キャッシュ復元
+  window.addEventListener('DOMContentLoaded', () => {
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      const savedValue = localStorage.getItem(`sis_${field}`);
+      if (savedValue) {
+        document.getElementById(field).value = savedValue;
+      }
+    });
+  });
+
   const today = new Date().toISOString().split('T')[0];
   dateInput.min = today;
 
-  const storageKeys = ['name', 'name_kana', 'tel', 'email'];
-  storageKeys.forEach(key => {
-    const element = document.getElementById(key);
-    const savedValue = localStorage.getItem('blnc_' + key);
-    if (savedValue) element.value = savedValue;
-    
-    element.addEventListener('input', () => {
-      localStorage.setItem('blnc_' + key, element.value);
-    });
+  [dateInput, staffSelect, menuSelect].forEach(element => {
+    element.addEventListener('change', fetchAvailableTimes);
   });
 
-  ['date', 'staff', 'menu'].forEach(id => {
-    document.getElementById(id).addEventListener('change', loadAvailableTimes);
-  });
-
-  function loadAvailableTimes() {
+  async function fetchAvailableTimes() {
     const date = dateInput.value;
-    const staff = document.getElementById('staff').value;
-    const menu = document.getElementById('menu').value;
-    const timeGrid = document.getElementById('timeGrid');
-    const submitButton = document.getElementById('submitButton');
-    const timeInput = document.getElementById('time');
+    const staff = staffSelect.value;
+    const menu = menuSelect.value;
 
-    timeInput.value = '';
-    submitButton.disabled = true;
+    if (!date) return;
 
-    if (!date) {
-      timeGrid.innerHTML = '<div class="loading-msg">日付を選択してください</div>';
-      return;
-    }
+    timeSelect.innerHTML = '<option value="">空き時間を計算中...</option>';
+    submitBtn.disabled = true;
 
-    timeGrid.innerHTML = '<div class="loading-msg">空き状況を確認中...</div>';
+    try {
+      const url = `${GAS_WEB_APP_URL}?method=getUnavailable&date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-    // メニュー文字列を安全にエンコードしてGASへ渡す
-    const fetchUrl = `${GAS_URL}?date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`;
-    
-    fetch(fetchUrl)
-      .then(res => res.json())
-      .then(data => {
-        timeGrid.innerHTML = '';
-
-        if (data.status === "REGULAR_HOLIDAY" || data.status === "STAFF_OFF") {
-          const msg = data.status === "REGULAR_HOLIDAY" ? "本日は定休日です。" : "指定スタッフは本日お休みです。";
-          timeGrid.innerHTML = `<div class="time-slot holiday">${msg}</div>`;
+      if (data.success) {
+        timeSelect.innerHTML = '';
+        
+        if (data.isShopHoliday) {
+          timeSelect.innerHTML = '<option value="">本日は定休日（または特別休業日）です</option>';
+          submitBtn.disabled = true;
           return;
         }
 
-        const unavailableTimes = data.bookedTimes || [];
-        const now = new Date();
-        const isToday = (date === now.toISOString().split('T')[0]);
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const slotResults = [];
+        let hasAvailableSlot = false;
+        let detectedReasons = [];
+        let totalSlotsCount = 0;
 
-        const dateParts = date.split('-');
-        const targetDateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-        const dayOfWeek = targetDateObj.getDay();
-        const businessHoursConfig = {0:18, 1:0, 2:19, 3:19, 4:19, 5:19, 6:18}[dayOfWeek];
+        for (let h = 9; h < 19; h++) {
+          const hours = String(h).padStart(2, '0');
+          ['00', '30'].forEach(m => {
+            const timeStr = `${hours}:${m}`;
+            totalSlotsCount++;
+            const matchHoliday = data.unavailableTimes.find(t => t.startsWith(timeStr));
 
-        let hasVisibleSlot = false;
-        
-        for (let h = 9; h <= 21; h++) {
-          for (let m = 0; m < 60; m += 30) {
-            let slot = ("0" + h).slice(-2) + ":" + ("0" + m).slice(-2);
-            let slotTotalMinutes = h * 60 + m;
-            
-            if (isToday && slotTotalMinutes <= currentMinutes + 30) continue;
-            if (slotTotalMinutes >= businessHoursConfig * 60) continue;
-
-            hasVisibleSlot = true;
-            const cell = document.createElement('div');
-            cell.className = 'time-slot';
-            cell.innerText = slot;
-
-            if (unavailableTimes.includes(slot)) {
-              cell.classList.add('disabled');
-              cell.innerText += ' (満席)';
+            if (matchHoliday) {
+              const reason = matchHoliday.split('|')[1] || "受付不可";
+              slotResults.push({ time: timeStr, available: false, reason: reason });
+              if (!detectedReasons.includes(reason)) {
+                detectedReasons.push(reason);
+              }
             } else {
-              cell.addEventListener('click', function() {
-                document.querySelectorAll('.time-slot').forEach(c => c.classList.remove('selected'));
-                cell.classList.add('selected');
-                timeInput.value = slot;
-                submitButton.disabled = false; 
-              });
+              slotResults.push({ time: timeStr, available: true, reason: "" });
+              hasAvailableSlot = true;
             }
-            timeGrid.appendChild(cell);
-          }
+          });
         }
 
-        if (!hasVisibleSlot) {
-          timeGrid.innerHTML = '<div class="time-slot holiday">ご案内できる時間帯がありません。</div>';
+        // 1. 【終日チェックが入っている最初からのブロック時】の1行案内
+        const isAllDayBlockedFromBeginning = data.unavailableTimes.length >= totalSlotsCount;
+        const allSameReason = isAllDayBlockedFromBeginning && data.unavailableTimes.every(t => t.split('|')[1] === data.unavailableTimes[0].split('|')[1]);
+
+        if (allSameReason) {
+          const opt = document.createElement('option');
+          opt.value = "";
+          opt.disabled = true;
+          opt.selected = true;
+
+          const mainReason = data.unavailableTimes[0].split('|')[1];
+
+          if (mainReason === "公休") {
+            opt.textContent = `【 ${staff} 】は本日公休をいただいております`;
+          } else if (mainReason === "勉強会のため予約は受け付けしていません") {
+            opt.textContent = `【 ${staff} 】は本日勉強会のため終日ご予約を受け付けておりません`;
+          } else if (mainReason === "満席") {
+            opt.textContent = `本日はすべての時間帯で満席となっております`;
+          } else {
+            opt.textContent = `【 ${staff} 】は本日お休みをいただいております (${mainReason})`;
+          }
+
+          timeSelect.appendChild(opt);
+          submitBtn.disabled = true;
+          return;
         }
-      })
-      .catch(err => {
-        console.error(err);
-        timeGrid.innerHTML = '<div class="time-slot disabled">データ取得に失敗しました。</div>';
-      });
+
+        // 2. 通常の30分刻み展開
+        slotResults.forEach(slot => {
+          const opt = document.createElement('option');
+          opt.value = slot.time;
+
+          if (!slot.available) {
+            opt.textContent = `${slot.time} (× ${slot.reason})`;
+            opt.disabled = true;
+          } else {
+            opt.textContent = `${slot.time} (○ 空きあり)`;
+          }
+          timeSelect.appendChild(opt);
+        });
+
+        // 💡【修正ポイント】選べる枠が1つもない（メニューの長さで埋まった）場合、先頭に「満席案内」を差し込む
+        if (!hasAvailableSlot) {
+          const noticeOpt = document.createElement('option');
+          noticeOpt.value = "";
+          noticeOpt.textContent = "本日はすべての時間帯で満席となっております";
+          noticeOpt.selected = true;
+          noticeOpt.disabled = true;
+          timeSelect.insertBefore(noticeOpt, timeSelect.firstChild);
+        }
+
+        submitBtn.disabled = !hasAvailableSlot;
+
+      } else {
+        timeSelect.innerHTML = '<option value="">エラーが発生しました</option>';
+      }
+    } catch (error) {
+      console.error(error);
+      timeSelect.innerHTML = '<option value="">通信エラーが発生しました</option>';
+    }
   }
 
-  document.getElementById('reservationForm').addEventListener('submit', function(e) {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const submitButton = document.getElementById('submitButton');
-    submitButton.disabled = true;
-    submitButton.innerText = '送信中...';
+    submitBtn.disabled = true;
+    loading.style.display = 'block';
 
-    const params = new URLSearchParams(new FormData(this));
-
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: params,
-      headers: { 'Accept': 'application/json' },
-      mode: 'cors'
-    })
-    .then(res => res.text())
-    .then(result => {
-      if (result === "完了") {
-        alert("ご予約が確定いたしました。");
-        window.location.reload(); 
-      } else {
-        alert("満席またはエラーが発生しました。再度日時を選び直してください。");
-        submitButton.innerText = '予約を確定する';
-        loadAvailableTimes();
-      }
-    })
-    .catch(error => {
-      submitButton.disabled = false;
-      submitButton.innerText = '予約を確定する';
+    const fields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+    fields.forEach(field => {
+      localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
     });
+
+    const formData = new URLSearchParams();
+    formData.append('date', dateInput.value);
+    formData.append('time', timeSelect.value);
+    formData.append('staff', staffSelect.value);
+    formData.append('menu', menuSelect.value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('name_kana', document.getElementById('name_kana').value);
+    formData.append('tel', document.getElementById('tel').value);
+    formData.append('email', document.getElementById('email').value);
+    formData.append('birthday', document.getElementById('birthday').value);
+    formData.append('memo', document.getElementById('memo').value);
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('ご予約が完了しました！確定メールをご確認ください。');
+        form.reset();
+        timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
+      } else {
+        alert('予約に失敗しました: ' + data.message);
+        submitBtn.disabled = false;
+      }
+    } catch (error) {
+      alert('通信エラーが発生しました。');
+      submitBtn.disabled = false;
+    } finally {
+      loading.style.display = 'none';
+    }
   });
 </script>
+
 </body>
 </html>
