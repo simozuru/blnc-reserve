@@ -112,7 +112,7 @@
 
 <script>
   // ★ここに新しいGASのウェブアプリURLを貼り付けてください★
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyD53QxFQ9Jt6UXkm5tQM0t2qfQZr2kIJSNfBKV8CbPVL5UfXshpgaV1s4pH_hX-Gfl/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxFF-OLzbeXbxwNfAQVjrKrD2V8PcSshSQzAoeIM_yo9cwABdK5eKaWSd0_rym4icIv/exec";
 
   const dateInput = document.getElementById('date');
   const staffSelect = document.getElementById('staff');
@@ -169,7 +169,7 @@
         let detectedReasons = [];
         let totalSlotsCount = 0;
 
-        for (let h = 9; h < 18; h++) {
+        for (let h = 9; h < 19; h++) {
           const hours = String(h).padStart(2, '0');
           ['00', '30'].forEach(m => {
             const timeStr = `${hours}:${m}`;
