@@ -12,7 +12,6 @@
       --card-bg: #ffffff;
       --text-color: #333333;
       --border-color: #dddddd;
-      --success-color: #6b8e23;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; justify-content: center; }
@@ -20,7 +19,7 @@
     h1 { font-size: 24px; text-align: center; margin-bottom: 5px; color: var(--primary-color); letter-spacing: 1px; }
     .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 25px; }
     
-    /* 💡 タブメニューのスタイル */
+    /* 💡 タブ切り替え用のデザインを追加 */
     .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; }
     .tab-btn { flex: 1; padding: 12px; text-align: center; background: none; border: none; font-size: 15px; font-weight: bold; color: #888; cursor: pointer; transition: all 0.2s; }
     .tab-btn.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); margin-bottom: -2px; }
@@ -42,8 +41,8 @@
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
 
-    /* 💡 予約確認カードのスタイル */
-    .reservation-card { border: 1px solid var(--border-color); border-left: 5px solid var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 15px; background-color: #faf9f7; }
+    /* 💡 予約確認カードのデザインを追加 */
+    .reservation-card { border: 1px solid var(--border-color); border-left: 5px solid var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 15px; background-color: #faf9f7; text-align: left; }
     .res-date { font-size: 16px; font-weight: bold; color: var(--primary-color); margin-bottom: 5px; }
     .res-details { font-size: 14px; color: #555; line-height: 1.5; }
     .no-data { text-align: center; color: #666; padding: 20px; font-size: 14px; }
@@ -53,7 +52,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.0 予約確認機能搭載)</div>
+  <div class="subtitle">サロン予約システム (Version 3.0 予約確認機能)</div>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
@@ -70,7 +69,7 @@
       <div class="form-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <option value="指名なし">指名なし </option>
+          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
           <option value="下鶴">下鶴</option>
           <option value="来馬">来馬</option>
           <option value="矢野">矢野</option>
@@ -154,17 +153,15 @@
   // 💡 あなたのデプロイした最新の「WebアプリURL」に書き換えてください
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzQxIw9gYD2j8NMTwIDIpetD9PP9ATDboRx3ZS6GZ_mTpnll6zLbC3m8LyjnGOxs-YM/exec";
 
-  // タブ切り替え処理
+  // タブ切り替えロジック
   function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     
-    // クリックされたタブをアクティブにする
     event.currentTarget.classList.add('active');
     document.getElementById(tabId).classList.add('active');
   }
 
-  // --- 新規予約フォーム用の変数・処理群 (Ver 2.2 のまま) ---
   const form = document.getElementById('reservation-form');
   const dateInput = document.getElementById('date');
   const staffSelect = document.getElementById('staff');
@@ -180,7 +177,6 @@
     const saved = localStorage.getItem(`sis_${field}`);
     if (saved) {
       document.getElementById(field).value = saved;
-      // 予約確認側の初期値にもセットしておく
       if (field === 'tel') document.getElementById('check-tel').value = saved;
     }
   });
@@ -235,11 +231,11 @@
         timeSelect.appendChild(option);
       });
 
-      timeSelect.disabled = false;
       if (selectableCount > 0) {
+        timeSelect.disabled = false;
         submitBtn.disabled = false;
       } else {
-        submitBtn.disabled = true;
+        timeSelect.innerHTML = '<option value="">申し訳ありません。本日はいっぱいです</option>';
       }
 
     } catch (error) {
@@ -248,7 +244,6 @@
     }
   }
 
-  // フォーム送信（新規予約登録）
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!confirm('この内容で予約を確定してもよろしいですか？')) return;
@@ -262,102 +257,4 @@
 
     const formData = new URLSearchParams();
     formData.append('date', dateInput.value);
-    formData.append('time', timeSelect.value);
-    formData.append('staff', staffSelect.value);
-    formData.append('menu', menuSelect.value);
-    formData.append('name', document.getElementById('name').value);
-    formData.append('name_kana', document.getElementById('name_kana').value);
-    formData.append('tel', document.getElementById('tel').value);
-    formData.append('email', document.getElementById('email').value);
-    formData.append('birthday', document.getElementById('birthday').value);
-    formData.append('memo', document.getElementById('memo').value);
-
-    try {
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        body: formData,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        alert('ご予約が完了しました！確定メールをご確認ください。');
-        // 予約確認用の電話番号も自動更新
-        document.getElementById('check-tel').value = document.getElementById('tel').value;
-        form.reset();
-        timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
-        timeSelect.disabled = true;
-      } else {
-        alert('予約に失敗しました: ' + data.message);
-      }
-    } catch (error) {
-      console.error('送信エラー:', error);
-      alert('通信エラーが発生しました。カレンダー等をご確認ください。');
-    } finally {
-      updateAvailableTimes();
-    }
-  });
-
-  // ==========================================
-  // 💡【Version 3.0 新設】予約確認データの取得処理
-  // ==========================================
-  async function fetchReservations() {
-    const telInput = document.getElementById('check-tel').value.trim();
-    const resultsArea = document.getElementById('check-results-area');
-    const checkBtn = document.getElementById('check-btn');
-
-    if (!telInput) {
-      alert('携帯電話番号を入力してください。');
-      return;
-    }
-
-    checkBtn.disabled = true;
-    checkBtn.textContent = 'ご予約状況を検索中...';
-    resultsArea.innerHTML = '<div class="no-data">確認用のデータを検索しています。少々お待ちください...</div>';
-
-    try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?method=getSlotStatuses&method=getCustomerReservations&tel=${encodeURIComponent(telInput)}`);
-      if (!response.ok) throw new Error('通信エラーが発生しました');
-      
-      const result = await response.json();
-
-      if (!result.success) {
-        resultsArea.innerHTML = `<div class="no-data" style="color: red;">${result.message}</div>`;
-        return;
-      }
-
-      // 予約リストの描画
-      if (result.reservations.length === 0) {
-        resultsArea.innerHTML = '<div class="no-data">現在、確定している未来のご予約はありません。</div>';
-        return;
-      }
-
-      let htmlContent = '<h3 style="font-size:15px; margin-bottom:15px; color:var(--primary-color);">お客様のご予約一覧（今日以降）</h3>';
-      
-      result.reservations.forEach(res => {
-        htmlContent += `
-          <div class="reservation-card">
-            <div class="res-date">📅 ${res.date} ⏰ ${res.time}〜</div>
-            <div class="res-details">
-              <strong>メニュー：</strong> ${res.menu}<br>
-              <strong>担当スタッフ：</strong> ${res.staff} 様<br>
-              ${res.memo ? `<strong>ご要望：</strong> ${res.memo}` : ''}
-            </div>
-          </div>
-        `;
-      });
-
-      resultsArea.innerHTML = htmlContent;
-
-    } catch (error) {
-      console.error('予約検索エラー:', error);
-      resultsArea.innerHTML = '<div class="no-data" style="color: red;">エラーが発生しました。時間を置いて再度お試しください。</div>';
-    } finally {
-      checkBtn.disabled = false;
-      checkBtn.textContent = 'ご予約状況を確認する';
-    }
-  }
-</script>
-
-</body>
-</html>
+    formData.append('time', timeSelect.value
