@@ -303,4 +303,75 @@
   // 💡 日付・時間を美しい日本語表記に変換して組み立てるエンジン
   async function fetchReservations() {
     const telInput = document.getElementById('check-tel').value.trim();
-    const resultsArea =
+    const resultsArea = document.getElementById('check-results-area');
+    const checkBtn = document.getElementById('check-btn');
+
+    if (!telInput) {
+      alert('携帯電話番号を入力してください。');
+      return;
+    }
+
+    checkBtn.disabled = true;
+    checkBtn.textContent = '検索中...';
+    resultsArea.innerHTML = '<div class="no-data">予約データを検索しています。少々お待ちください...</div>';
+
+    try {
+      const response = await fetch(`${GAS_WEB_APP_URL}?method=getCustomerReservations&tel=${encodeURIComponent(telInput)}`);
+      if (!response.ok) throw new Error('通信エラーが発生しました');
+      
+      const result = await response.json();
+
+      if (!result.success) {
+        resultsArea.innerHTML = `<div class="no-data" style="color: red;">${result.message}</div>`;
+        return;
+      }
+
+      if (result.reservations.length === 0) {
+        resultsArea.innerHTML = '<div class="no-data">現在、確定している今日以降のご予約はありません。</div>';
+        return;
+      }
+
+      let htmlContent = '<h3 style="font-size:14px; margin-bottom:15px; color:var(--primary-color);">お客様のご予約状況</h3>';
+      
+      result.reservations.forEach(res => {
+        // 💡 2026-07-08 -> 2026年07月08日 に変換
+        const dateParts = res.date.split('-');
+        const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
+
+        // 💡 10:30 -> 10時30分 に変換
+        const timeParts = res.time.split(':');
+        const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
+
+        htmlContent += `
+          <div class="reservation-card">
+            <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
+            <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
+            <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
+            <div class="res-row"><span class="res-label">担当</span> ${res.staff} 様</div>
+            ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
+            <div class="res-created">⏱ 受付時間：${res.createdAt}</div>
+            
+            <button class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
+          </div>
+        `;
+      });
+
+      resultsArea.innerHTML = htmlContent;
+
+    } catch (error) {
+      console.error('予約検索エラー:', error);
+      resultsArea.innerHTML = '<div class="no-data" style="color: red;">エラーが発生しました。時間を置いて再度お試しください。</div>';
+    } finally {
+      checkBtn.disabled = false;
+      checkBtn.textContent = 'ご予約状況を確認する';
+    }
+  }
+
+  // キャンセルボタンが押された時の仮のアラート
+  function requestCancel(date, time, staff) {
+    alert(`【キャンセル機能は次回実装】\n対象予約：${date} ${time} (${staff}様 担当)\n\nただいま自動キャンセル処理を開発中です。お手数ですが、取り消しの際はお電話またはサロン公式LINEよりご連絡ください。`);
+  }
+</script>
+
+</body>
+</html>
