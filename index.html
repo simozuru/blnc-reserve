@@ -48,7 +48,7 @@
     <div class="form-group">
       <label for="staff">担当スタッフ *</label>
       <select id="staff" required>
-        <option value="指名なし">指名なし (店舗全体の空き状況)</option>
+        <option value="指名なし">指名なし</option>
         <option value="下鶴">下鶴</option>
         <option value="来馬">来馬</option>
         <option value="矢野">矢野</option>
@@ -104,7 +104,7 @@
 
     <div class="form-group">
       <label for="memo">ご要望・備考</label>
-      <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
+      <textarea id="placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
     </div>
 
     <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
@@ -158,7 +158,6 @@
     submitBtn.disabled = true;
 
     try {
-      // 💡【Version 2.2 変更】時間枠ごとのステータス（〇/×）オブジェクトを1発で取得する
       const response = await fetch(`${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`);
       if (!response.ok) throw new Error('データ取得に失敗しました');
       const slotStatuses = await response.json();
@@ -186,7 +185,7 @@
           option.textContent = `${timeStr}  〇`;
           selectableCount++;
         } else {
-          // 💡 予約不可能な場合：テキストを「×」にし、選択できないようにロック（disabled）する
+          // 💡 予約不可能な場合：テキストを一律「×」にし、選択できないようにロック（disabled）する
           option.textContent = `${timeStr}  ×`;
           option.disabled = true;
         }
@@ -194,12 +193,15 @@
         timeSelect.appendChild(option);
       });
 
-      // 1枠でも選べる時間があれば時間選択と確定ボタンを活性化
+      // 💡【Version 2.2 修正】「本日はいっぱいです」への強制書き換えを排除。
+      // 全枠が×の場合でも、セレクトボックスを有効化して「×」の一覧をそのままスクロールで見られるようにします。
+      timeSelect.disabled = false;
+
+      // 1枠でも選べる時間があれば確定ボタンを活性化、なければ確定ボタンは押せないままにする
       if (selectableCount > 0) {
-        timeSelect.disabled = false;
         submitBtn.disabled = false;
       } else {
-        timeSelect.innerHTML = '<option value="">申し訳ありません。本日はいっぱいです</option>';
+        submitBtn.disabled = true;
       }
 
     } catch (error) {
@@ -252,8 +254,8 @@
       console.error('送信エラー:', error);
       alert('通信エラーが発生しました。カレンダー等をご確認ください。');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = '上記の内容で予約を確定する';
+      // 選べる枠があるときだけ活性に戻す
+      updateAvailableTimes();
     }
   });
 </script>
