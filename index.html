@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.0.5</title>
+  <title>SIS Web Reservation - ver 3.2.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -57,7 +57,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.0.5)</div>
+  <div class="subtitle">サロン予約システム (Version 3.2.0)</div>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
@@ -120,7 +120,7 @@
       <div class="form-group">
         <label for="email">メールアドレス *</label>
         <input type="email" id="email" required placeholder="example@gmail.com">
-        <div class="note">予約確定メールが届きますので、正しくご入力ください</div>
+        <div class="note">予約の確認・自動キャンセル時に認証キーとして使用します</div>
       </div>
 
       <div class="form-group">
@@ -281,7 +281,7 @@
       const data = await response.json();
       
       if (data.success) {
-        alert('ご予約が完了しました！確定メールをご確認ください。');
+        alert('ご予約が完了しました！');
         document.getElementById('check-tel').value = document.getElementById('tel').value;
         document.getElementById('check-email').value = document.getElementById('email').value;
         form.reset();
@@ -367,8 +367,47 @@
     }
   }
 
-  function requestCancel(date, time, staff) {
-    alert(`【キャンセル機能は次回実装】\n対象予約：${date} ${time} (${staff} 担当)\n\nただいま自動キャンセル処理を開発中です。お手数ですが、取り消しの際はお電話またはサロン公式LINEよりご連絡ください。`);
+  async function requestCancel(date, time, staff) {
+    const dateParts = date.split('-');
+    const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : date;
+
+    const confirmMessage = `以下のご予約をキャンセルしてもよろしいですか？\n\n・日時：${formattedDate} ${time}\n・担当：${staff}\n\n※この操作は取り消せません。`;
+    if (!confirm(confirmMessage)) return;
+
+    const telInput = document.getElementById('check-tel').value.trim();
+    const emailInput = document.getElementById('check-email').value.trim();
+    const resultsArea = document.getElementById('check-results-area');
+
+    resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
+
+    const formData = new URLSearchParams();
+    formData.append('action', 'cancel');
+    formData.append('date', date);
+    formData.append('time', time);
+    formData.append('staff', staff);
+    formData.append('tel', telInput);
+    formData.append('email', emailInput);
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert('ご予約のキャンセルが正常に完了しました。');
+        fetchReservations();
+      } else {
+        alert('キャンセルに失敗しました: ' + data.message);
+        fetchReservations();
+      }
+    } catch (error) {
+      console.error('キャンセル通信エラー:', error);
+      alert('通信エラーが発生しました。時間を置いて再度お試しください。');
+      fetchReservations();
+    }
   }
 </script>
 
