@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 2.2</title>
+  <title>SIS Web Reservation - ver 3.2.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -12,12 +12,20 @@
       --card-bg: #ffffff;
       --text-color: #333333;
       --border-color: #dddddd;
+      --danger-color: #cc0000;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; justify-content: center; }
     .container { max-width: 600px; width: 100%; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     h1 { font-size: 24px; text-align: center; margin-bottom: 5px; color: var(--primary-color); letter-spacing: 1px; }
-    .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 30px; }
+    .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 25px; }
+    
+    .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; }
+    .tab-btn { flex: 1; padding: 12px; text-align: center; background: none; border: none; font-size: 15px; font-weight: bold; color: #888; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); margin-bottom: -2px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     .form-group { margin-bottom: 20px; }
     label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--primary-color); }
     input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select, textarea {
@@ -25,95 +33,139 @@
     }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
     textarea { resize: vertical; min-height: 80px; }
+    
     .btn-submit {
       width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; margin-top: 10px;
     }
     .btn-submit:hover { background-color: #857461; }
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
+
+    .reservation-card { border: 1px solid var(--border-color); border-left: 6px solid var(--accent-color); padding: 18px; border-radius: 8px; margin-bottom: 18px; background-color: #faf9f7; text-align: left; }
+    .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
+    .res-label { font-weight: bold; color: var(--primary-color); display: inline-block; width: 85px; }
+    .res-created { font-size: 12px; color: #888; margin-top: 12px; border-top: 1px dashed #e0e0e0; padding-top: 8px; }
+    
+    .btn-cancel {
+      display: block; width: 100%; text-align: center; padding: 10px; margin-top: 12px; background-color: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-cancel:hover { background-color: #fff5f5; }
+    .no-data { text-align: center; color: #666; padding: 20px; font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 2.2 〇/×可視化対応版)</div>
+  <div class="subtitle">サロン予約システム (Version 3.2.0)</div>
 
-  <form id="reservation-form">
-    <div class="form-group">
-      <label for="date">ご来店希望日 *</label>
-      <input type="date" id="date" required>
-    </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
+    <button class="tab-btn" onclick="switchTab('check-tab')">予約の確認・キャンセル</button>
+  </div>
 
-    <div class="form-group">
-      <label for="staff">担当スタッフ *</label>
-      <select id="staff" required>
-        <option value="指名なし">指名なし</option>
-        <option value="下鶴">下鶴</option>
-        <option value="来馬">来馬</option>
-        <option value="矢野">矢野</option>
-      </select>
-    </div>
+  <div id="reserve-tab" class="tab-content active">
+    <form id="reservation-form">
+      <div class="form-group">
+        <label for="date">ご来店希望日 *</label>
+        <input type="date" id="date" required>
+      </div>
 
-    <div class="form-group">
-      <label for="menu">施術メニュー *</label>
-      <select id="menu" required>
-        <option value="">メニューを選択してください</option>
-        <option value="カット">カット</option>
-        <option value="カラー">カラー</option>
-        <option value="パーマ">パーマ</option>
-        <option value="縮毛矯正">縮毛矯正</option>
-      </select>
-    </div>
+      <div class="form-group">
+        <label for="staff">担当スタッフ *</label>
+        <select id="staff" required>
+          <option value="指名なし">指名なし</option>
+          <option value="下鶴">下鶴</option>
+          <option value="来馬">来馬</option>
+          <option value="矢野">矢野</option>
+        </select>
+      </div>
 
+      <div class="form-group">
+        <label for="menu">施術メニュー *</label>
+        <select id="menu" required>
+          <option value="">メニューを選択してください</option>
+          <option value="カット">カット</option>
+          <option value="カラー">カラー</option>
+          <option value="パーマ">パーマ</option>
+          <option value="縮毛矯正">縮毛矯正</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="time">ご来店希望時間 *</label>
+        <select id="time" required disabled>
+          <option value="">日付を選択してください</option>
+        </select>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
+
+      <div class="form-group">
+        <label for="name">お名前 (漢字) *</label>
+        <input type="text" id="name" required placeholder="山田 太郎">
+      </div>
+
+      <div class="form-group">
+        <label for="name_kana">お名前 (フリガナ) *</label>
+        <input type="text" id="name_kana" required placeholder="ヤマダ タロウ">
+      </div>
+
+      <div class="form-group">
+        <label for="tel">携帯電話番号 *</label>
+        <input type="tel" id="tel" required placeholder="09012345678" pattern="^[0-9\-]+$">
+        <div class="note">ハイフンはあってもなくても構いません</div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">メールアドレス *</label>
+        <input type="email" id="email" required placeholder="example@gmail.com">
+        <div class="note">予約の確認・自動キャンセル時に認証キーとして使用します</div>
+      </div>
+
+      <div class="form-group">
+        <label for="memo">ご要望・備考</label>
+        <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
+    </form>
+  </div>
+
+  <div id="check-tab" class="tab-content">
     <div class="form-group">
-      <label for="time">ご来店希望時間 *</label>
-      <select id="time" required disabled>
-        <option value="">日付を選択してください</option>
-      </select>
+      <label for="check-tel">ご登録の携帯電話番号</label>
+      <input type="tel" id="check-tel" placeholder="09012345678">
     </div>
+    
+    <div class="form-group">
+      <label for="check-email">ご登録のメールアドレス</label>
+      <input type="email" id="check-email" placeholder="example@gmail.com">
+      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」を入力してください。</div>
+    </div>
+    
+    <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button>
 
     <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
-
-    <div class="form-group">
-      <label for="name">お名前 (漢字) *</label>
-      <input type="text" id="name" required placeholder="山田 太郎">
+    
+    <div id="check-results-area">
+      <div class="no-data">情報を入力して確認ボタンを押してください。</div>
     </div>
+  </div>
 
-    <div class="form-group">
-      <label for="name_kana">お名前 (フリガナ) *</label>
-      <input type="text" id="name_kana" required placeholder="ヤマダ タロウ">
-    </div>
-
-    <div class="form-group">
-      <label for="tel">携帯電話番号 *</label>
-      <input type="tel" id="tel" required placeholder="09012345678" pattern="^[0-9\-]+$">
-      <div class="note">ハイフンはあってもなくても構いません</div>
-    </div>
-
-    <div class="form-group">
-      <label for="email">メールアドレス *</label>
-      <input type="email" id="email" required placeholder="example@gmail.com">
-      <div class="note">予約確定メールが届きますので、正しくご入力ください</div>
-    </div>
-
-    <div class="form-group">
-      <label for="birthday">生年月日</label>
-      <input type="date" id="birthday">
-    </div>
-
-    <div class="form-group">
-      <label for="memo">ご要望・備考</label>
-      <textarea id="placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
-    </div>
-
-    <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
-  </form>
 </div>
 
 <script>
-  // 💡 あなたのデプロイした最新の「WebアプリURL」に書き換えてください
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwan3wNgshCv5lvF_tLh4YnGlkf1KXhnYFLMMoLqeUDJzFZ9X5Yr8vDwZgU7avWcA83/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwsB0p5398oxOCIIAoaWezNfpFjhefRy6UgLU_-QawDGmry50xNb8sL2K52cYAeGmzC/exec";
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    if (window.event && window.event.currentTarget) {
+      window.event.currentTarget.classList.add('active');
+    }
+    document.getElementById(tabId).classList.add('active');
+  }
 
   const form = document.getElementById('reservation-form');
   const dateInput = document.getElementById('date');
@@ -122,25 +174,23 @@
   const timeSelect = document.getElementById('time');
   const submitBtn = document.getElementById('submit-btn');
 
-  // 本日以降しか選択できないように制御
   const today = new Date().toISOString().split('T')[0];
   dateInput.min = today;
 
-  // 入力保存用フィールド
-  const storageFields = ['name', 'name_kana', 'tel', 'email', 'birthday'];
+  const storageFields = ['name', 'name_kana', 'tel', 'email'];
   storageFields.forEach(field => {
     const saved = localStorage.getItem(`sis_${field}`);
-    if (saved) document.getElementById(field).value = saved;
+    if (saved) {
+      document.getElementById(field).value = saved;
+      if (field === 'tel') document.getElementById('check-tel').value = saved;
+      if (field === 'email') document.getElementById('check-email').value = saved;
+    }
   });
 
-  // 条件が変更されたらステータスを再計算
   [dateInput, staffSelect, menuSelect].forEach(element => {
     element.addEventListener('change', updateAvailableTimes);
   });
 
-  /**
-   * 💡 【Version 2.2】届いたステータス（〇/×）を元に、選択肢をすべて生成して出し分ける
-   */
   async function updateAvailableTimes() {
     const dateVal = dateInput.value;
     const staffVal = staffSelect.value;
@@ -162,46 +212,36 @@
       if (!response.ok) throw new Error('データ取得に失敗しました');
       const slotStatuses = await response.json();
 
-      // 選択ボックスを一度完全に空にする
       timeSelect.innerHTML = '<option value="">時間を選択してください</option>';
 
-      // 定休日・臨時休業日判定
       if (slotStatuses.SHOP_HOLIDAY) {
         timeSelect.innerHTML = '<option value="">本日は定休日・または休業日です</option>';
         return;
       }
 
-      // オブジェクトのキー（時間文字列）を並び替えて走査
       const timeKeys = Object.keys(slotStatuses).sort();
       let selectableCount = 0;
 
       timeKeys.forEach(timeStr => {
-        const status = slotStatuses[timeStr]; // "○" または "×"
+        const status = slotStatuses[timeStr];
         const option = document.createElement('option');
         option.value = timeStr;
 
         if (status === "○") {
-          // 予約可能な場合
           option.textContent = `${timeStr}  〇`;
           selectableCount++;
         } else {
-          // 💡 予約不可能な場合：テキストを一律「×」にし、選択できないようにロック（disabled）する
           option.textContent = `${timeStr}  ×`;
           option.disabled = true;
         }
-        
         timeSelect.appendChild(option);
       });
 
-      // 💡【Version 2.2 修正】「本日はいっぱいです」への強制書き換えを排除。
-      // 全枠が×の場合でも、セレクトボックスを有効化して「×」の一覧をそのままスクロールで見られるようにします。
-      timeSelect.disabled = false;
-
-      // 1枠でも選べる時間があれば確定ボタンを活性化、なければ確定ボタンは押せないままにする
       if (selectableCount > 0) {
+        timeSelect.disabled = false;
         submitBtn.disabled = false;
       } else {
-        submitBtn.disabled = true;
+        timeSelect.innerHTML = '<option value="">申し訳ありません。本日はいっぱいです</option>';
       }
 
     } catch (error) {
@@ -210,7 +250,6 @@
     }
   }
 
-  // フォーム送信処理（変更なし）
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!confirm('この内容で予約を確定してもよろしいですか？')) return;
@@ -231,7 +270,6 @@
     formData.append('name_kana', document.getElementById('name_kana').value);
     formData.append('tel', document.getElementById('tel').value);
     formData.append('email', document.getElementById('email').value);
-    formData.append('birthday', document.getElementById('birthday').value);
     formData.append('memo', document.getElementById('memo').value);
 
     try {
@@ -243,7 +281,9 @@
       const data = await response.json();
       
       if (data.success) {
-        alert('ご予約が完了しました！確定メールをご確認ください。');
+        alert('ご予約が完了しました！');
+        document.getElementById('check-tel').value = document.getElementById('tel').value;
+        document.getElementById('check-email').value = document.getElementById('email').value;
         form.reset();
         timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
         timeSelect.disabled = true;
@@ -254,10 +294,121 @@
       console.error('送信エラー:', error);
       alert('通信エラーが発生しました。カレンダー等をご確認ください。');
     } finally {
-      // 選べる枠があるときだけ活性に戻す
+      submitBtn.disabled = false;
+      submitBtn.textContent = '上記の内容で予約を確定する';
       updateAvailableTimes();
     }
   });
+
+  async function fetchReservations() {
+    const telInput = document.getElementById('check-tel').value.trim();
+    const emailInput = document.getElementById('check-email').value.trim();
+    const resultsArea = document.getElementById('check-results-area');
+    const checkBtn = document.getElementById('check-btn');
+
+    if (!telInput || !emailInput) {
+      alert('携帯電話番号とメールアドレスの両方を入力してください。');
+      return;
+    }
+
+    checkBtn.disabled = true;
+    checkBtn.textContent = '検索中...';
+    resultsArea.innerHTML = '<div class="no-data">予約データを検索しています。少々お待ちください...</div>';
+
+    localStorage.setItem('sis_tel', telInput);
+    localStorage.setItem('sis_email', emailInput);
+
+    try {
+      const response = await fetch(`${GAS_WEB_APP_URL}?method=getCustomerReservations&tel=${encodeURIComponent(telInput)}&email=${encodeURIComponent(emailInput)}`);
+      if (!response.ok) throw new Error('通信エラーが発生しました');
+      
+      const result = await response.json();
+
+      if (!result.success) {
+        resultsArea.innerHTML = `<div class="no-data" style="color: red;">${result.message}</div>`;
+        return;
+      }
+
+      if (result.reservations.length === 0) {
+        resultsArea.innerHTML = '<div class="no-data">現在、条件に一致する今日以降のご予約はありません。</div>';
+        return;
+      }
+
+      let htmlContent = '<h3 style="font-size:14px; margin-bottom:15px; color:var(--primary-color);">お客様のご予約状況</h3>';
+      
+      result.reservations.forEach(res => {
+        const dateParts = res.date.split('-');
+        const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
+
+        const timeParts = res.time.split(':');
+        const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
+
+        htmlContent += `
+          <div class="reservation-card">
+            <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
+            <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
+            <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
+            <div class="res-row"><span class="res-label">担当</span> ${res.staff}</div>
+            ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
+            <div class="res-created">⏱ 受付時間：${res.createdAt}</div>
+            <button class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
+          </div>
+        `;
+      });
+
+      resultsArea.innerHTML = htmlContent;
+
+    } catch (error) {
+      console.error('予約検索エラー:', error);
+      resultsArea.innerHTML = '<div class="no-data" style="color: red;">エラーが発生しました。時間を置いて再度お試しください。</div>';
+    } finally {
+      checkBtn.disabled = false;
+      checkBtn.textContent = 'ご予約状況を確認する';
+    }
+  }
+
+  async function requestCancel(date, time, staff) {
+    const dateParts = date.split('-');
+    const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : date;
+
+    const confirmMessage = `以下のご予約をキャンセルしてもよろしいですか？\n\n・日時：${formattedDate} ${time}\n・担当：${staff}\n\n※この操作は取り消せません。`;
+    if (!confirm(confirmMessage)) return;
+
+    const telInput = document.getElementById('check-tel').value.trim();
+    const emailInput = document.getElementById('check-email').value.trim();
+    const resultsArea = document.getElementById('check-results-area');
+
+    resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
+
+    const formData = new URLSearchParams();
+    formData.append('action', 'cancel');
+    formData.append('date', date);
+    formData.append('time', time);
+    formData.append('staff', staff);
+    formData.append('tel', telInput);
+    formData.append('email', emailInput);
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert('ご予約のキャンセルが正常に完了しました。');
+        fetchReservations();
+      } else {
+        alert('キャンセルに失敗しました: ' + data.message);
+        fetchReservations();
+      }
+    } catch (error) {
+      console.error('キャンセル通信エラー:', error);
+      alert('通信エラーが発生しました。時間を置いて再度お試しください。');
+      fetchReservations();
+    }
+  }
 </script>
 
 </body>
