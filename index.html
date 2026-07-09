@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.2.0</title>
+  <title>SIS Web Reservation - ver 3.4.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -13,366 +13,315 @@
       --text-color: #333333;
       --border-color: #dddddd;
       --danger-color: #cc0000;
+      --info-color: #2b579a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; justify-content: center; }
     .container { max-width: 600px; width: 100%; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     h1 { font-size: 24px; text-align: center; margin-bottom: 5px; color: var(--primary-color); letter-spacing: 1px; }
-    .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 25px; }
+    .subtitle { font-size: 12px; text-align: center; color: #888; margin-bottom: 25px; }
     
-    .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; }
-    .tab-btn { flex: 1; padding: 12px; text-align: center; background: none; border: none; font-size: 15px; font-weight: bold; color: #888; cursor: pointer; transition: all 0.2s; }
-    .tab-btn.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); margin-bottom: -2px; }
+    .tabs { display: flex; margin-bottom: 25px; border-bottom: 2px solid var(--border-color); }
+    .tab-button { flex: 1; padding: 12px; text-align: center; background: none; border: none; font-size: 15px; font-weight: bold; color: #888; cursor: pointer; transition: all 0.3s; }
+    .tab-button.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); margin-bottom: -2px; }
+    
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    
+    /* 変更案内バナー */
+    .change-banner { display: none; background-color: #e6f0fa; border-left: 5px solid var(--info-color); padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 14px; color: #1a3a60; }
+    .change-banner span { font-weight: bold; }
+    .cancel-change-btn { margin-left: 10px; background: #999; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
     .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--primary-color); }
-    input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select, textarea {
-      width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 15px; background-color: #fff; transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
-    textarea { resize: vertical; min-height: 80px; }
+    label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--primary-color); }
+    input[type="text"], input[type="tel"], input[type="email"], select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 15px; transition: border 0.3s; background: #fafafa; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent-color); outline: none; background: #fff; }
     
-    .btn-submit {
-      width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; margin-top: 10px;
-    }
-    .btn-submit:hover { background-color: #857461; }
-    .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
-    .note { font-size: 12px; color: #666; margin-top: 5px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    
+    .slots-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; max-height: 240px; overflow-y: auto; padding: 5px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; }
+    .slot-btn { padding: 10px 5px; text-align: center; border-radius: 6px; border: 1px solid var(--border-color); background: #fff; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+    .slot-btn.available { border-color: #bdecb6; color: #2e7d32; }
+    .slot-btn.available:hover { background: #e8f5e9; }
+    .slot-btn.selected { background: var(--accent-color) !important; color: #fff !important; border-color: var(--accent-color) !important; }
+    .slot-btn.unavailable { background: #f5f5f5; color: #bbb; cursor: not-allowed; border-color: #eee; }
+    
+    button.submit-btn { width: 100%; padding: 14px; background: var(--accent-color); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s; margin-top: 10px; }
+    button.submit-btn:hover { background: #847361; }
+    
+    .res-card { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .res-card-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; color: var(--primary-color); }
+    .res-card-body p { font-size: 14px; margin-bottom: 5px; color: #555; }
+    .res-card-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; border-top: 1px solid #f5f5f5; padding-top: 10px; }
+    
+    .cancel-btn { background: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .cancel-btn:hover { background: #fff5f5; }
+    .change-btn { background: #fff; color: var(--info-color); border: 1px solid var(--info-color); padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .change-btn:hover { background: #f0f4fa; }
 
-    .reservation-card { border: 1px solid var(--border-color); border-left: 6px solid var(--accent-color); padding: 18px; border-radius: 8px; margin-bottom: 18px; background-color: #faf9f7; text-align: left; }
-    .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
-    .res-label { font-weight: bold; color: var(--primary-color); display: inline-block; width: 85px; }
-    .res-created { font-size: 12px; color: #888; margin-top: 12px; border-top: 1px dashed #e0e0e0; padding-top: 8px; }
-    
-    .btn-cancel {
-      display: block; width: 100%; text-align: center; padding: 10px; margin-top: 12px; background-color: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
-    }
-    .btn-cancel:hover { background-color: #fff5f5; }
-    .no-data { text-align: center; color: #666; padding: 20px; font-size: 14px; }
+    .no-data { text-align: center; padding: 30px; color: #888; font-size: 14px; }
+    .loading-slots { grid-column: span 4; text-align: center; padding: 20px; color: #666; font-size: 13px; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.2.0)</div>
-
+  <div class="subtitle">Salon Information System</div>
+  
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
-    <button class="tab-btn" onclick="switchTab('check-tab')">予約の確認・キャンセル</button>
+    <button class="tab-button active" onclick="switchTab('reserve')">新規予約</button>
+    <button class="tab-button" onclick="switchTab('check')">予約の確認・変更</button>
+  </div>
+  
+  <div id="change-mode-banner" class="change-banner">
+    ⚠️ <span>予約日時を変更中：</span> <span id="change-target-desc"></span>
+    <button class="cancel-change-btn" onclick="exitChangeMode()">変更を中止</button>
   </div>
 
-  <div id="reserve-tab" class="tab-content active">
-    <form id="reservation-form">
-      <div class="form-group">
-        <label for="date">ご来店希望日 *</label>
-        <input type="date" id="date" required>
+  <div id="tab-reserve" class="tab-content active">
+    <form id="reservation-form" onsubmit="submitReservation(event)">
+      <div class="form-group grid-2">
+        <div>
+          <label for="res-menu">メニュー選択 *</label>
+          <select id="res-menu" required onchange="onReserveParamChange()">
+            <option value="">メニューを選んでください</option>
+            <option value="カット">カット (60分)</option>
+            <option value="カラー">カラー (90分)</option>
+            <option value="カット＋カラー">カット＋カラー (120分)</option>
+            <option value="縮毛矯正">縮毛矯正 (180分)</option>
+          </select>
+        </div>
+        <div>
+          <label for="res-staff">スタッフ指名 *</label>
+          <select id="res-staff" required onchange="onReserveParamChange()">
+            <option value="指名なし">指名なし（自動割当）</option>
+            <option value="鈴木">鈴木（スタイリスト）</option>
+            <option value="佐藤">佐藤（カラーリスト）</option>
+          </select>
+        </div>
       </div>
-
-      <div class="form-group">
-        <label for="staff">担当スタッフ *</label>
-        <select id="staff" required>
-          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
-          <option value="下鶴">下鶴</option>
-          <option value="来馬">来馬</option>
-          <option value="矢野">矢野</option>
-        </select>
+      
+      <div class="form-group grid-2">
+        <div>
+          <label for="res-date">希望日 *</label>
+          <input type="date" id="res-date" required onchange="onReserveParamChange()">
+        </div>
+        <div>
+          <label>希望時間 * <span id="selected-time-display" style="color:var(--accent-color); font-weight:normal;"></span></label>
+          <input type="hidden" id="res-time" required>
+          <div id="slots-area" class="slots-container">
+            <div class="loading-slots">メニュー、スタッフ、希望日を選択してください</div>
+          </div>
+        </div>
       </div>
-
-      <div class="form-group">
-        <label for="menu">施術メニュー *</label>
-        <select id="menu" required>
-          <option value="">メニューを選択してください</option>
-          <option value="カット">カット</option>
-          <option value="カラー">カラー</option>
-          <option value="パーマ">パーマ</option>
-          <option value="縮毛矯正">縮毛矯正</option>
-        </select>
+      
+      <div class="form-group grid-2">
+        <div>
+          <label for="res-name">お名前（漢字） *</label>
+          <input type="text" id="res-name" placeholder="山田 太郎" required>
+        </div>
+        <div>
+          <label for="res-name-kana">お名前（かな） *</label>
+          <input type="text" id="res-name-kana" placeholder="やまだ たろう" required>
+        </div>
       </div>
-
-      <div class="form-group">
-        <label for="time">ご来店希望時間 *</label>
-        <select id="time" required disabled>
-          <option value="">日付を選択してください</option>
-        </select>
+      
+      <div class="form-group grid-2">
+        <div>
+          <label for="res-tel">携帯電話番号 *</label>
+          <input type="tel" id="res-tel" placeholder="09012345678" pattern="^0[789]0[0-9]{8}$" title="090, 080, 070から始まる11桁の半角数字" required>
+        </div>
+        <div>
+          <label for="res-email">メールアドレス *</label>
+          <input type="email" id="res-email" placeholder="example@mail.com" required>
+        </div>
       </div>
-
-      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
-
+      
       <div class="form-group">
-        <label for="name">お名前 (漢字) *</label>
-        <input type="text" id="name" required placeholder="山田 太郎">
+        <label for="res-memo">備考・ご要望</label>
+        <textarea id="res-memo" rows="3" placeholder="髪型のご相談や、アレルギー等あればご記入ください"></textarea>
       </div>
-
-      <div class="form-group">
-        <label for="name_kana">お名前 (フリガナ) *</label>
-        <input type="text" id="name_kana" required placeholder="ヤマダ タロウ">
-      </div>
-
-      <div class="form-group">
-        <label for="tel">携帯電話番号 *</label>
-        <input type="tel" id="tel" required placeholder="09012345678" pattern="^[0-9\-]+$">
-        <div class="note">ハイフンはあってもなくても構いません</div>
-      </div>
-
-      <div class="form-group">
-        <label for="email">メールアドレス *</label>
-        <input type="email" id="email" required placeholder="example@gmail.com">
-        <div class="note">予約の確認・自動キャンセル時に認証キーとして使用します</div>
-      </div>
-
-      <div class="form-group">
-        <label for="memo">ご要望・備考</label>
-        <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
-      </div>
-
-      <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
+      
+      <button type="submit" id="submit-button" class="submit-btn">予約を確定する</button>
     </form>
   </div>
-
-  <div id="check-tab" class="tab-content">
-    <div class="form-group">
-      <label for="check-tel">ご登録の携帯電話番号</label>
-      <input type="tel" id="check-tel" placeholder="09012345678">
+  
+  <div id="tab-check" class="tab-content">
+    <div class="form-group grid-2">
+      <div>
+        <label for="check-tel">登録携帯電話番号</label>
+        <input type="tel" id="check-tel" placeholder="09012345678">
+      </div>
+      <div>
+        <label for="check-email">登録メールアドレス</label>
+        <input type="email" id="check-email" placeholder="example@mail.com">
+      </div>
     </div>
+    <button type="button" class="submit-btn" onclick="fetchReservations()">予約を検索する</button>
     
-    <div class="form-group">
-      <label for="check-email">ご登録のメールアドレス</label>
-      <input type="email" id="check-email" placeholder="example@gmail.com">
-      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」を入力してください。</div>
-    </div>
-    
-    <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button>
-
-    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
-    
-    <div id="check-results-area">
-      <div class="no-data">情報を入力して確認ボタンを押してください。</div>
+    <div id="check-results-area" style="margin-top: 25px;">
+      <div class="no-data">ここに検索結果が表示されます</div>
     </div>
   </div>
-
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxn03bfYkRqhGR_gK87a3iuMmniewZSR4kFeMrZCINBweBRKBhsc66d3ZxcEVlCSUyo/exec";
+  // 🔴 開発環境に応じてご自身のWebアプリURLに書き換えてください
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBH8Klp1QyCEFC3eKXPLqRn2lOPL5g77hp3Xf5-hg7YhKgTFn0AeMwJcLrRRQ7eh2w/exec"; 
 
-  function switchTab(tabId) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  // 予約変更モードを管理するグローバル変数
+  let changeMode = {
+    isActive: false,
+    oldDate: '',
+    oldTime: '',
+    oldStaff: ''
+  };
+
+  // 今日以降の日付しか選べないように制限
+  const todayStr = new Date().toISOString().split('T')[0];
+  document.getElementById('res-date').min = todayStr;
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    if (window.event && window.event.currentTarget) {
-      window.event.currentTarget.classList.add('active');
+    
+    if (tabName === 'reserve') {
+      document.querySelectorAll('.tab-button')[0].classList.add('active');
+      document.getElementById('tab-reserve').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab-button')[1].classList.add('active');
+      document.getElementById('tab-check').classList.add('active');
     }
-    document.getElementById(tabId).classList.add('active');
   }
 
-  const form = document.getElementById('reservation-form');
-  const dateInput = document.getElementById('date');
-  const staffSelect = document.getElementById('staff');
-  const menuSelect = document.getElementById('menu');
-  const timeSelect = document.getElementById('time');
-  const submitBtn = document.getElementById('submit-btn');
+  // 条件変更時にタイムスロットを取得
+  async function onReserveParamChange() {
+    const menu = document.getElementById('res-menu').value;
+    const staff = document.getElementById('res-staff').value;
+    const date = document.getElementById('res-date').value;
+    const slotsArea = document.getElementById('slots-area');
+    
+    // 時間選択のクリア
+    document.getElementById('res-time').value = "";
+    document.getElementById('selected-time-display').innerText = "";
 
-  const today = new Date().toISOString().split('T')[0];
-  dateInput.min = today;
-
-  const storageFields = ['name', 'name_kana', 'tel', 'email'];
-  storageFields.forEach(field => {
-    const saved = localStorage.getItem(`sis_${field}`);
-    if (saved) {
-      document.getElementById(field).value = saved;
-      if (field === 'tel') document.getElementById('check-tel').value = saved;
-      if (field === 'email') document.getElementById('check-email').value = saved;
-    }
-  });
-
-  [dateInput, staffSelect, menuSelect].forEach(element => {
-    element.addEventListener('change', updateAvailableTimes);
-  });
-
-  async function updateAvailableTimes() {
-    const dateVal = dateInput.value;
-    const staffVal = staffSelect.value;
-    const menuVal = menuSelect.value;
-
-    if (!dateVal || !staffVal || !menuVal) {
-      timeSelect.disabled = true;
-      timeSelect.innerHTML = '<option value="">日時とメニューを選択してください</option>';
-      submitBtn.disabled = true;
+    if (!menu || !staff || !date) {
+      slotsArea.innerHTML = '<div class="loading-slots">メニュー、スタッフ、希望日を選択してください</div>';
       return;
     }
 
-    timeSelect.disabled = true;
-    timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
-    submitBtn.disabled = true;
+    slotsArea.innerHTML = '<div class="loading-slots">空き状況を確認中...</div>';
 
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`);
-      if (!response.ok) throw new Error('データ取得に失敗しました');
-      const slotStatuses = await response.json();
-
-      timeSelect.innerHTML = '<option value="">時間を選択してください</option>';
-
-      if (slotStatuses.SHOP_HOLIDAY) {
-        timeSelect.innerHTML = '<option value="">本日は定休日・または休業日です</option>';
-        return;
-      }
-
-      const timeKeys = Object.keys(slotStatuses).sort();
-      let selectableCount = 0;
-
-      timeKeys.forEach(timeStr => {
-        const status = slotStatuses[timeStr];
-        const option = document.createElement('option');
-        option.value = timeStr;
-
-        if (status === "○") {
-          option.textContent = `${timeStr}  〇`;
-          selectableCount++;
-        } else {
-          option.textContent = `${timeStr}  ×`;
-          option.disabled = true;
-        }
-        timeSelect.appendChild(option);
-      });
-
-      if (selectableCount > 0) {
-        timeSelect.disabled = false;
-        submitBtn.disabled = false;
-      } else {
-        timeSelect.innerHTML = '<option value="">申し訳ありません。本日はいっぱいです</option>';
-      }
-
-    } catch (error) {
-      console.error('通信エラー:', error);
-      timeSelect.innerHTML = '<option value="">エラーが発生しました。再試行してください</option>';
-    }
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!confirm('この内容で予約を確定してもよろしいですか？')) return;
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = '予約を登録中...';
-
-    storageFields.forEach(field => {
-      localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
-    });
-
-    const formData = new URLSearchParams();
-    formData.append('date', dateInput.value);
-    formData.append('time', timeSelect.value);
-    formData.append('staff', staffSelect.value);
-    formData.append('menu', menuSelect.value);
-    formData.append('name', document.getElementById('name').value);
-    formData.append('name_kana', document.getElementById('name_kana').value);
-    formData.append('tel', document.getElementById('tel').value);
-    formData.append('email', document.getElementById('email').value);
-    formData.append('memo', document.getElementById('memo').value);
-
-    try {
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        body: formData,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
+      const url = `${GAS_WEB_APP_URL}?action=getSlots&date=${date}&staff=${encodeURIComponent(staff)}&menu=${encodeURIComponent(menu)}`;
+      const response = await fetch(url);
       const data = await response.json();
-      
-      if (data.success) {
-        alert('ご予約が完了しました！');
-        document.getElementById('check-tel').value = document.getElementById('tel').value;
-        document.getElementById('check-email').value = document.getElementById('email').value;
-        form.reset();
-        timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
-        timeSelect.disabled = true;
+
+      slotsArea.innerHTML = "";
+      if (data && data.slots) {
+        let hasAvailable = false;
+        for (const [time, status] of Object.entries(data.slots)) {
+          const btn = document.createElement('button');
+          btn.type = "button";
+          btn.className = "slot-btn";
+          
+          if (status === "○") {
+            btn.classList.add('available');
+            btn.innerText = `${time} ○`;
+            btn.onclick = () => selectTime(time, btn);
+            hasAvailable = true;
+          } else {
+            btn.classList.add('unavailable');
+            btn.innerText = `${time} ×`;
+            btn.disabled = true;
+          }
+          slotsArea.appendChild(btn);
+        }
+        if (!hasAvailable) {
+          slotsArea.innerHTML = '<div class="loading-slots" style="color:var(--danger-color)">申し訳ありません。この日は満席です。</div>';
+        }
       } else {
-        alert('予約に失敗しました: ' + data.message);
+        slotsArea.innerHTML = '<div class="loading-slots">空き枠データの取得に失敗しました</div>';
       }
-    } catch (error) {
-      console.error('送信エラー:', error);
-      alert('通信エラーが発生しました。カレンダー等をご確認ください。');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = '上記の内容で予約を確定する';
-      updateAvailableTimes();
+    } catch (e) {
+      slotsArea.innerHTML = '<div class="loading-slots">通信エラーが発生しました</div>';
     }
-  });
+  }
 
+  function selectTime(time, btnElement) {
+    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+    btnElement.classList.add('selected');
+    document.getElementById('res-time').value = time;
+    document.getElementById('selected-time-display').innerText = `（選択：${time}）`;
+  }
+
+  // 予約検索
   async function fetchReservations() {
-    const telInput = document.getElementById('check-tel').value.trim();
-    const emailInput = document.getElementById('check-email').value.trim();
+    const tel = document.getElementById('check-tel').value.trim();
+    const email = document.getElementById('check-email').value.trim();
     const resultsArea = document.getElementById('check-results-area');
-    const checkBtn = document.getElementById('check-btn');
 
-    if (!telInput || !emailInput) {
-      alert('携帯電話番号とメールアドレスの両方を入力してください。');
+    if (!tel || !email) {
+      alert("携帯電話番号とメールアドレスを両方入力してください。");
       return;
     }
 
-    checkBtn.disabled = true;
-    checkBtn.textContent = '検索中...';
-    resultsArea.innerHTML = '<div class="no-data">予約データを検索しています。少々お待ちください...</div>';
-
-    localStorage.setItem('sis_tel', telInput);
-    localStorage.setItem('sis_email', emailInput);
+    resultsArea.innerHTML = '<div class="no-data">予約データを検索しています...</div>';
 
     try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?method=getCustomerReservations&tel=${encodeURIComponent(telInput)}&email=${encodeURIComponent(emailInput)}`);
-      if (!response.ok) throw new Error('通信エラーが発生しました');
-      
-      const result = await response.json();
+      const url = `${GAS_WEB_APP_URL}?action=getReservations&tel=${tel}&email=${encodeURIComponent(email)}`;
+      const response = await fetch(url);
+      const data = await response.json();
 
-      if (!result.success) {
-        resultsArea.innerHTML = `<div class="no-data" style="color: red;">${result.message}</div>`;
+      if (!data.success) {
+        resultsArea.innerHTML = `<div class="no-data" style="color:var(--danger-color)">${data.message}</div>`;
         return;
       }
 
-      if (result.reservations.length === 0) {
-        resultsArea.innerHTML = '<div class="no-data">現在、条件に一致する今日以降のご予約はありません。</div>';
+      if (!data.reservations || data.reservations.length === 0) {
+        resultsArea.innerHTML = '<div class="no-data">現在、今日以降の未来のご予約はありません。</div>';
         return;
       }
 
-      let htmlContent = '<h3 style="font-size:14px; margin-bottom:15px; color:var(--primary-color);">お客様のご予約状況</h3>';
-      
-      result.reservations.forEach(res => {
+      resultsArea.innerHTML = "";
+      data.reservations.forEach(res => {
+        const card = document.createElement('div');
+        card.className = "res-card";
+        
         const dateParts = res.date.split('-');
         const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
 
-        const timeParts = res.time.split(':');
-        const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
-
-        htmlContent += `
-          <div class="reservation-card">
-            <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
-            <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
-            <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
-            <div class="res-row"><span class="res-label">担当</span> ${res.staff}</div>
-            ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
-            <div class="res-created">⏱ 受付時間：${res.createdAt}</div>
-            <button class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
+        card.innerHTML = `
+          <div class="res-card-header">
+            <span>📅 ${formattedDate} ${res.time}</span>
+          </div>
+          <div class="res-card-body">
+            <p><strong>■ メニュー：</strong> ${res.menu}</p>
+            <p><strong>■ 担当者：</strong> ${res.staff}</p>
+            ${res.memo ? `<p><strong>■ 要望：</strong> ${res.memo}</p>` : ''}
+            <p style="font-size:11px; color:#999; margin-top:8px;">受付日時: ${res.createdAt}</p>
+          </div>
+          <div class="res-card-actions">
+            <button class="change-btn" onclick="enterChangeMode('${res.date}', '${res.time}', '${res.staff}', '${res.menu}', '${res.memo}', '${res.customerName}')">日時を変更する</button>
+            <button class="cancel-btn" onclick="cancelReservation('${res.date}', '${res.time}', '${res.staff}')">キャンセル</button>
           </div>
         `;
+        resultsArea.appendChild(card);
       });
 
-      resultsArea.innerHTML = htmlContent;
-
-    } catch (error) {
-      console.error('予約検索エラー:', error);
-      resultsArea.innerHTML = '<div class="no-data" style="color: red;">エラーが発生しました。時間を置いて再度お試しください。</div>';
-    } finally {
-      checkBtn.disabled = false;
-      checkBtn.textContent = 'ご予約状況を確認する';
+    } catch (e) {
+      resultsArea.innerHTML = '<div class="no-data">通信エラーが発生しました。</div>';
     }
   }
 
-  async function requestCancel(date, time, staff) {
+  // キャンセル処理
+  async function cancelReservation(date, time, staff) {
     const dateParts = date.split('-');
     const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : date;
 
-    const confirmMessage = `以下のご予約をキャンセルしてもよろしいですか？\n\n・日時：${formattedDate} ${time}\n・担当：${staff}\n\n※この操作は取り消せません。`;
-    if (!confirm(confirmMessage)) return;
+    if (!confirm(`以下のご予約をキャンセルしてもよろしいですか？\n\n・日時：${formattedDate} ${time}\n・担当：${staff}\n\n※この操作は取り消せません。`)) return;
 
     const telInput = document.getElementById('check-tel').value.trim();
     const emailInput = document.getElementById('check-email').value.trim();
@@ -398,15 +347,135 @@
 
       if (data.success) {
         alert('ご予約のキャンセルが正常に完了しました。');
-        fetchReservations();
+        fetchReservations(); // 再検索して一覧を更新
       } else {
         alert('キャンセルに失敗しました: ' + data.message);
         fetchReservations();
       }
-    } catch (error) {
-      console.error('キャンセル通信エラー:', error);
-      alert('通信エラーが発生しました。時間を置いて再度お試しください。');
+    } catch (e) {
+      alert('通信エラーが発生しました。');
       fetchReservations();
+    }
+  }
+
+  // 💡 [New] 予約変更モードへの移行処理
+  function enterChangeMode(date, time, staff, menu, memo, customerName) {
+    changeMode.isActive = true;
+    changeMode.oldDate = date;
+    changeMode.oldTime = time;
+    changeMode.oldStaff = staff;
+
+    // バナー表示
+    const dateParts = date.split('-');
+    const formattedDate = dateParts.length === 3 ? `${dateParts[0]}/${dateParts[1]}/${dateParts[2]}` : date;
+    document.getElementById('change-target-desc').innerText = `${formattedDate} ${time} (${menu})`;
+    document.getElementById('change-mode-banner').style.display = 'block';
+
+    // フォームに既存の値を詰め込む
+    document.getElementById('res-menu').value = menu;
+    document.getElementById('res-staff').value = staff;
+    document.getElementById('res-date').value = date;
+    document.getElementById('res-name').value = customerName;
+    document.getElementById('res-name-kana').value = "（変更時は入力不要）"; // ダミー文字（サーバー側はtelで顧客特定するため問題なし）
+    document.getElementById('res-tel').value = document.getElementById('check-tel').value;
+    document.getElementById('res-email').value = document.getElementById('check-email').value;
+    document.getElementById('res-memo').value = memo;
+
+    // 確定ボタンの文言を変更
+    document.getElementById('submit-button').innerText = "上記の内容に変更する（確定）";
+    document.getElementById('submit-button').style.background = "var(--info-color)";
+
+    // スロットの再描画
+    onReserveParamChange();
+
+    // 予約フォームタブへ自動で切り替え
+    switchTab('reserve');
+  }
+
+  // 💡 [New] 変更モードの解除
+  function exitChangeMode() {
+    changeMode.isActive = false;
+    document.getElementById('change-mode-banner').style.display = 'none';
+    document.getElementById('reservation-form').reset();
+    document.getElementById('res-time').value = "";
+    document.getElementById('selected-time-display').innerText = "";
+    document.getElementById('submit-button').innerText = "予約を確定する";
+    document.getElementById('submit-button').style.background = "var(--accent-color)";
+    document.getElementById('slots-area').innerHTML = '<div class="loading-slots">メニュー、スタッフ、希望日を選択してください</div>';
+  }
+
+  // フォーム送信（新規登録 または 変更確定）
+  async function submitReservation(event) {
+    event.preventDefault();
+
+    const selectedTime = document.getElementById('res-time').value;
+    if (!selectedTime) {
+      alert("ご希望の時間（○印）を選択してください。");
+      return;
+    }
+
+    const submitBtn = document.getElementById('submit-button');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "通信中...";
+
+    const formData = new URLSearchParams();
+    
+    if (changeMode.isActive) {
+      // 💡 変更モード時は「change」アクションを実行
+      formData.append('action', 'change');
+      formData.append('oldDate', changeMode.oldDate);
+      formData.append('oldTime', changeMode.oldTime);
+      formData.append('oldStaff', changeMode.oldStaff);
+      
+      formData.append('newDate', document.getElementById('res-date').value);
+      formData.append('newTime', selectedTime);
+      formData.append('menu', document.getElementById('res-menu').value);
+      formData.append('staff', document.getElementById('res-staff').value);
+      formData.append('tel', document.getElementById('res-tel').value.trim());
+      formData.append('email', document.getElementById('res-email').value.trim());
+      formData.append('memo', document.getElementById('res-memo').value.trim());
+    } else {
+      // 通常時は「reserve」アクション
+      formData.append('action', 'reserve');
+      formData.append('date', document.getElementById('res-date').value);
+      formData.append('time', selectedTime);
+      formData.append('menu', document.getElementById('res-menu').value);
+      formData.append('staff', document.getElementById('res-staff').value);
+      formData.append('name', document.getElementById('res-name').value.trim());
+      formData.append('name_kana', document.getElementById('res-name-kana').value.trim());
+      formData.append('tel', document.getElementById('res-tel').value.trim());
+      formData.append('email', document.getElementById('res-email').value.trim());
+      formData.append('memo', document.getElementById('res-memo').value.trim());
+    }
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert(data.message);
+        if (changeMode.isActive) {
+          exitChangeMode();
+          switchTab('check');
+          fetchReservations(); // 変更後の内容を再描画
+        } else {
+          document.getElementById('reservation-form').reset();
+          document.getElementById('res-time').value = "";
+          document.getElementById('selected-time-display').innerText = "";
+          document.getElementById('slots-area').innerHTML = '<div class="loading-slots">メニュー、スタッフ、希望日を選択してください</div>';
+        }
+      } else {
+        alert('処理に失敗しました: ' + data.message);
+      }
+    } catch (e) {
+      alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerText = changeMode.isActive ? "上記の内容に変更する（確定）" : "予約を確定する";
     }
   }
 </script>
