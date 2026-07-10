@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.4.2</title>
+  <title>SIS Web Reservation - ver 3.2.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -13,7 +13,6 @@
       --text-color: #333333;
       --border-color: #dddddd;
       --danger-color: #cc0000;
-      --info-color: #2f96b4;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; justify-content: center; }
@@ -42,23 +41,13 @@
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
 
-    /* 変更案内バナー用スタイル */
-    .change-alert-banner { display: none; background-color: #f4f0ec; border: 2px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #555; }
-    .change-alert-banner strong { color: var(--accent-color); }
-    .btn-cancel-change { background: none; border: none; color: var(--danger-color); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
-
     .reservation-card { border: 1px solid var(--border-color); border-left: 6px solid var(--accent-color); padding: 18px; border-radius: 8px; margin-bottom: 18px; background-color: #faf9f7; text-align: left; }
     .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
     .res-label { font-weight: bold; color: var(--primary-color); display: inline-block; width: 85px; }
     .res-created { font-size: 12px; color: #888; margin-top: 12px; border-top: 1px dashed #e0e0e0; padding-top: 8px; }
     
-    .btn-action-group { display: flex; gap: 10px; margin-top: 12px; }
-    .btn-change {
-      flex: 1; text-align: center; padding: 10px; background-color: var(--accent-color); color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
-    }
-    .btn-change:hover { background-color: #857461; }
     .btn-cancel {
-      flex: 1; text-align: center; padding: 10px; background-color: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+      display: block; width: 100%; text-align: center; padding: 10px; margin-top: 12px; background-color: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.2s;
     }
     .btn-cancel:hover { background-color: #fff5f5; }
     .no-data { text-align: center; color: #666; padding: 20px; font-size: 14px; }
@@ -68,20 +57,14 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.4.2)</div>
+  <div class="subtitle">サロン予約システム (Version 3.2.0)</div>
 
   <div class="tabs">
-    <button id="tab-reserve-btn" class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
-    <button id="tab-check-btn" class="tab-btn" onclick="switchTab('check-tab')">予約の確認・変更</button>
+    <button class="tab-btn active" onclick="switchTab('reserve-tab')">新規予約</button>
+    <button class="tab-btn" onclick="switchTab('check-tab')">予約の確認・キャンセル</button>
   </div>
 
   <div id="reserve-tab" class="tab-content active">
-    <div id="change-banner" class="change-alert-banner">
-      現在 <strong>【予約日時を変更中】</strong> です。<br>
-      新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。
-      <button type="button" class="btn-cancel-change" onclick="abortChangeMode()">➔ 変更をやめる</button>
-    </div>
-
     <form id="reservation-form">
       <div class="form-group">
         <label for="date">ご来店希望日 *</label>
@@ -91,7 +74,7 @@
       <div class="form-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <option value="指名なし">指名なし</option>
+          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
           <option value="下鶴">下鶴</option>
           <option value="来馬">来馬</option>
           <option value="矢野">矢野</option>
@@ -173,19 +156,13 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyD6fGL0X35flxb7U4rL1oGfkq58Zr2O4LjQShlkfsJByJ-OxCMKWEiiUmmz6sSg3JB/exec";
-
-  // 💡 予約変更データを一時保持するグローバル変数
-  let changeModeData = null;
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzTHKXOGrertFEXAyrL8MPhsiboTXLDkPhJnoL8NZTnDgzWABukgKj9vAnr_6mIAHBW/exec";
 
   function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    if (tabId === 'reserve-tab') {
-      document.getElementById('tab-reserve-btn').classList.add('active');
-    } else {
-      document.getElementById('tab-check-btn').classList.add('active');
+    if (window.event && window.event.currentTarget) {
+      window.event.currentTarget.classList.add('active');
     }
     document.getElementById(tabId).classList.add('active');
   }
@@ -200,7 +177,6 @@
   const today = new Date().toISOString().split('T')[0];
   dateInput.min = today;
 
-  // キャッシュ復元機能（1ミリも変えていません）
   const storageFields = ['name', 'name_kana', 'tel', 'email'];
   storageFields.forEach(field => {
     const saved = localStorage.getItem(`sis_${field}`);
@@ -215,7 +191,6 @@
     element.addEventListener('change', updateAvailableTimes);
   });
 
-  // 空き枠取得ロジック（Version 3.2.0のオリジナルの通信・オブジェクト処理に完全復元）
   async function updateAvailableTimes() {
     const dateVal = dateInput.value;
     const staffVal = staffSelect.value;
@@ -233,7 +208,6 @@
     submitBtn.disabled = true;
 
     try {
-      // 3.2.0と100%同じ通信URLと方法に戻しました
       const response = await fetch(`${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`);
       if (!response.ok) throw new Error('データ取得に失敗しました');
       const slotStatuses = await response.json();
@@ -276,42 +250,20 @@
     }
   }
 
-  // フォーム送信処理（通常予約と予約変更のハイブリッド安全仕様）
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // 変更モードか通常モードかで確認メッセージを切り替え
-    const confirmMsg = changeModeData 
-      ? '選択した新しい日時で予約を変更してもよろしいですか？' 
-      : 'この内容で予約を確定してもよろしいですか？';
-      
-    if (!confirm(confirmMsg)) return;
+    if (!confirm('この内容で予約を確定してもよろしいですか？')) return;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = changeModeData ? '予約を変更中...' : '予約を登録中...';
+    submitBtn.textContent = '予約を登録中...';
 
-    // キャッシュ保存機能（1ミリも変えていません）
     storageFields.forEach(field => {
       localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
     });
 
     const formData = new URLSearchParams();
-    
-    if (changeModeData) {
-      // 💡【変更モード時】の通信パラメータ
-      formData.append('action', 'change');
-      formData.append('oldDate', changeModeData.oldDate);
-      formData.append('oldTime', changeModeData.oldTime);
-      formData.append('oldStaff', changeModeData.oldStaff);
-      formData.append('newDate', dateInput.value);
-      formData.append('newTime', timeSelect.value);
-    } else {
-      // 【通常予約時】の通信パラメータ
-      formData.append('date', dateInput.value);
-      formData.append('time', timeSelect.value);
-    }
-    
-    // 共通の入力項目を追加
+    formData.append('date', dateInput.value);
+    formData.append('time', timeSelect.value);
     formData.append('staff', staffSelect.value);
     formData.append('menu', menuSelect.value);
     formData.append('name', document.getElementById('name').value);
@@ -329,26 +281,14 @@
       const data = await response.json();
       
       if (data.success) {
-        if (changeModeData) {
-          alert('ご予約の変更が正常に完了しました！');
-          abortChangeMode(); // 変更モードの解除
-        } else {
-          alert('ご予約が完了しました！');
-        }
+        alert('ご予約が完了しました！');
         document.getElementById('check-tel').value = document.getElementById('tel').value;
         document.getElementById('check-email').value = document.getElementById('email').value;
         form.reset();
         timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
         timeSelect.disabled = true;
-        
-        // キャッシュから再度お名前などをフォームに復元させておく（おもてなし）
-        storageFields.forEach(field => {
-          const saved = localStorage.getItem(`sis_${field}`);
-          if (saved) document.getElementById(field).value = saved;
-        });
-        
       } else {
-        alert('処理に失敗しました: ' + data.message);
+        alert('予約に失敗しました: ' + data.message);
       }
     } catch (error) {
       console.error('送信エラー:', error);
@@ -360,7 +300,6 @@
     }
   });
 
-  // 予約検索ロジック（1ミリも変えていません）
   async function fetchReservations() {
     const telInput = document.getElementById('check-tel').value.trim();
     const emailInput = document.getElementById('check-email').value.trim();
@@ -412,10 +351,7 @@
             <div class="res-row"><span class="res-label">担当</span> ${res.staff}</div>
             ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
             <div class="res-created">⏱ 受付時間：${res.createdAt}</div>
-            <div class="btn-action-group">
-              <button class="btn-change" onclick="startChangeMode('${res.date}', '${res.time}', '${res.staff}', '${res.menu}', '${res.memo ? res.memo.replace(/'/g, "\\'") : ""}')">日時を変更する</button>
-              <button class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
-            </div>
+            <button class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
           </div>
         `;
       });
@@ -431,54 +367,6 @@
     }
   }
 
-  // 💡【新設】予約変更モードの開始処理
-  function startChangeMode(date, time, staff, menu, memo) {
-    // 1. 元の予約内容を記憶
-    changeModeData = {
-      oldDate: date,
-      oldTime: time,
-      oldStaff: staff
-    };
-
-    // 2. 新規フォームに変更前のメニュー・スタッフ・備考を自動で連動セット
-    staffSelect.value = staff;
-    menuSelect.value = menu;
-    document.getElementById('memo').value = memo;
-
-    // 日付はあえて空にして新しく選んでもらう（あるいは元の日付を入れておく場合は以下）
-    dateInput.value = date;
-
-    // 3. 画面の見た目を予約変更用にカスタム
-    document.getElementById('change-banner').style.display = 'block';
-    submitBtn.textContent = '上記の内容で変更を確定する';
-
-    // 4. 新規予約（変更手続き）タブへ切り替え
-    switchTab('reserve-tab');
-    
-    // 5. 空き時間を自動再計算
-    updateAvailableTimes();
-    
-    // スクロールを一番上に戻す
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // 💡【新設】予約変更モードの解除処理
-  function abortChangeMode() {
-    changeModeData = null;
-    document.getElementById('change-banner').style.display = 'none';
-    submitBtn.textContent = '上記の内容で予約を確定する';
-    
-    // キャッシュを再復元してフォームを通常のクリア状態に
-    form.reset();
-    storageFields.forEach(field => {
-      const saved = localStorage.getItem(`sis_${field}`);
-      if (saved) document.getElementById(field).value = saved;
-    });
-    timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
-    timeSelect.disabled = true;
-  }
-
-  // キャンセル処理ロジック（1ミリも変えていません）
   async function requestCancel(date, time, staff) {
     const dateParts = date.split('-');
     const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : date;
