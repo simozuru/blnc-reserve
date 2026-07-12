@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.7.0</title>
+  <title>SIS Web Reservation - ver 3.8.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -67,7 +67,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.7.0)</div>
+  <div class="subtitle">サロン予約システム (Version 3.8.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -90,7 +90,7 @@
       <div class="form-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
+          <option value="指名なし">指名なし </option>
           <option value="下鶴">下鶴</option>
           <option value="来馬">来馬</option>
           <option value="矢野">矢野</option>
@@ -172,7 +172,7 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4E6pe-EHJJjDZKLK0IxUC4LgBPme6Ds7AiLH3lbknjCfqlJthH7VP5fNa_X6DZTVA/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwIfm3FzwWCqXJ1q0Nvy9QYpudu-vNoA4mE3z-PTDXBNh46Zm74vvLU9VvEAItEKJgf/exec";
 
   let changeModeData = null;
 
@@ -210,7 +210,6 @@
     element.addEventListener('change', updateAvailableTimes);
   });
 
-  // 💡【Version 3.7.0 修正】空き枠取得時に「予約ID」をパラメータに乗せる
   async function updateAvailableTimes() {
     const dateVal = dateInput.value;
     const staffVal = staffSelect.value;
@@ -230,7 +229,6 @@
     try {
       let fetchUrl = `${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`;
       
-      // 💡 変更モード中なら「予約ID（resId）」を一緒に送る
       if (changeModeData && changeModeData.resId) {
         fetchUrl += `&resId=${encodeURIComponent(changeModeData.resId)}`;
       }
@@ -297,7 +295,7 @@
     
     if (changeModeData) {
       formData.append('action', 'change');
-      formData.append('resId', changeModeData.resId); // 💡【Version 3.7.0 変更】変更時は予約IDだけを主キーとして送信
+      formData.append('resId', changeModeData.resId); 
       formData.append('newDate', dateInput.value);
       formData.append('newTime', timeSelect.value);
     } else {
@@ -326,7 +324,6 @@
           alert('ご予約の変更が正常に完了しました！');
           abortChangeMode();
         } else {
-          // 新規予約時は、発行された予約IDをアラートで見せてあげることも可能
           const msg = data.resId ? `ご予約が完了しました！\n【ご予約ID: ${data.resId}】` : 'ご予約が完了しました！';
           alert(msg);
         }
@@ -401,7 +398,7 @@
         const safeMenu = (res.menu || '').replace(/"/g, '&quot;');
         const safeStaff = (res.staff || '').replace(/"/g, '&quot;');
         const safeMemo = (res.memo || '').replace(/"/g, '&quot;');
-        const safeId = (res.id || '').replace(/"/g, '&quot;'); // 💡【Version 3.7.0 変更】予約IDを安全に保持
+        const safeId = (res.id || '').replace(/"/g, '&quot;');
 
         htmlContent += `
           <div class="reservation-card">
@@ -441,10 +438,9 @@
     }
   }
 
-  // 💡【Version 3.7.0 変更】予約IDをガッチリ記憶して変更モードへ
   function startChangeMode(buttonEl) {
     changeModeData = {
-      resId: buttonEl.getAttribute('data-id'), // 💡最重要：予約ID
+      resId: buttonEl.getAttribute('data-id'), 
       oldDate: buttonEl.getAttribute('data-date'),
       oldTime: buttonEl.getAttribute('data-time'),
       oldStaff: buttonEl.getAttribute('data-staff'),
@@ -480,7 +476,6 @@
     timeSelect.disabled = true;
   }
 
-  // 💡【Version 3.7.0 変更】キャンセル時も予約IDのみを主キーとして送信
   async function requestCancel(buttonEl) {
     const resId = buttonEl.getAttribute('data-id');
     if (!resId) return;
@@ -492,7 +487,7 @@
 
     const formData = new URLSearchParams();
     formData.append('action', 'cancel');
-    formData.append('resId', resId); // 💡これだけ送ればGAS側でピンポイント処理できる
+    formData.append('resId', resId);
 
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
@@ -507,7 +502,7 @@
       } else {
         alert('キャンセルに失敗しました: ' + data.message);
       }
-      fetchReservations(); // 再読込
+      fetchReservations(); 
     } catch (error) {
       console.error('キャンセル通信エラー:', error);
       alert('通信エラーが発生しました。時間を置いて再度お試しください。');
