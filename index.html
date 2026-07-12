@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.6.0</title>
+  <title>SIS Web Reservation - ver 3.7.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -41,7 +41,6 @@
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
 
-    /* 💡予約変更中案内バナー表示用 */
     .change-alert-banner { display: none; background-color: #f4f0ec; border: 2px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #555; }
     .change-alert-banner strong { color: var(--accent-color); }
     .btn-cancel-change { background: none; border: none; color: var(--danger-color); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
@@ -49,6 +48,7 @@
     .reservation-card { border: 1px solid var(--border-color); border-left: 6px solid var(--accent-color); padding: 18px; border-radius: 8px; margin-bottom: 18px; background-color: #faf9f7; text-align: left; }
     .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
     .res-label { font-weight: bold; color: var(--primary-color); display: inline-block; width: 85px; }
+    .res-id-badge { display: inline-block; padding: 2px 6px; background-color: #e0d9d0; color: #555; font-size: 11px; font-weight: bold; border-radius: 4px; margin-left: 5px; }
     .res-created { font-size: 12px; color: #888; margin-top: 12px; border-top: 1px dashed #e0e0e0; padding-top: 8px; }
     
     .btn-action-group { display: flex; gap: 10px; margin-top: 12px; }
@@ -67,7 +67,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.6.0)</div>
+  <div class="subtitle">サロン予約システム (Version 3.7.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -136,7 +136,7 @@
       <div class="form-group">
         <label for="email">メールアドレス *</label>
         <input type="email" id="email" required placeholder="example@gmail.com">
-        <div class="note">予約の確認・自動キャンセル時に認証キーとして使用します</div>
+        <div class="note">予約の確認・自動キャンセル時に使用します</div>
       </div>
 
       <div class="form-group">
@@ -150,14 +150,14 @@
 
   <div id="check-tab" class="tab-content">
     <div class="form-group">
-      <label for="check-tel">ご登録 of 携帯電話番号</label>
+      <label for="check-tel">ご登録の携帯電話番号</label>
       <input type="tel" id="check-tel" placeholder="09012345678">
     </div>
     
     <div class="form-group">
       <label for="check-email">ご登録のメールアドレス</label>
       <input type="email" id="check-email" placeholder="example@gmail.com">
-      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」を入力してください。</div>
+      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」で検索します。</div>
     </div>
     
     <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button>
@@ -172,7 +172,7 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzCQpo5n5DJj0MA-jJQTvlzpH9PyhYn-TG1PONz3NgYvxjPm7hMeUaQxm_8cSbQRDKh/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby4E6pe-EHJJjDZKLK0IxUC4LgBPme6Ds7AiLH3lbknjCfqlJthH7VP5fNa_X6DZTVA/exec";
 
   let changeModeData = null;
 
@@ -210,7 +210,7 @@
     element.addEventListener('change', updateAvailableTimes);
   });
 
-  // 🔄 💡【Version 3.6.0 修正】空き枠取得処理で変更元のヒントをGASに投げる
+  // 💡【Version 3.7.0 修正】空き枠取得時に「予約ID」をパラメータに乗せる
   async function updateAvailableTimes() {
     const dateVal = dateInput.value;
     const staffVal = staffSelect.value;
@@ -228,12 +228,11 @@
     submitBtn.disabled = true;
 
     try {
-      // 基本のURL構築
       let fetchUrl = `${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`;
       
-      // 💡変更変更モード中であれば、元の時間と元のメニュー名をパラメータに追加する！
-      if (changeModeData) {
-        fetchUrl += `&oldTime=${encodeURIComponent(changeModeData.oldTime)}&oldMenu=${encodeURIComponent(changeModeData.oldMenu)}`;
+      // 💡 変更モード中なら「予約ID（resId）」を一緒に送る
+      if (changeModeData && changeModeData.resId) {
+        fetchUrl += `&resId=${encodeURIComponent(changeModeData.resId)}`;
       }
 
       const response = await fetch(fetchUrl);
@@ -298,9 +297,7 @@
     
     if (changeModeData) {
       formData.append('action', 'change');
-      formData.append('oldDate', changeModeData.oldDate);
-      formData.append('oldTime', changeModeData.oldTime);
-      formData.append('oldStaff', changeModeData.oldStaff);
+      formData.append('resId', changeModeData.resId); // 💡【Version 3.7.0 変更】変更時は予約IDだけを主キーとして送信
       formData.append('newDate', dateInput.value);
       formData.append('newTime', timeSelect.value);
     } else {
@@ -329,7 +326,9 @@
           alert('ご予約の変更が正常に完了しました！');
           abortChangeMode();
         } else {
-          alert('ご予約が完了しました！');
+          // 新規予約時は、発行された予約IDをアラートで見せてあげることも可能
+          const msg = data.resId ? `ご予約が完了しました！\n【ご予約ID: ${data.resId}】` : 'ご予約が完了しました！';
+          alert(msg);
         }
         
         document.getElementById('check-tel').value = document.getElementById('tel').value;
@@ -402,9 +401,14 @@
         const safeMenu = (res.menu || '').replace(/"/g, '&quot;');
         const safeStaff = (res.staff || '').replace(/"/g, '&quot;');
         const safeMemo = (res.memo || '').replace(/"/g, '&quot;');
+        const safeId = (res.id || '').replace(/"/g, '&quot;'); // 💡【Version 3.7.0 変更】予約IDを安全に保持
 
         htmlContent += `
           <div class="reservation-card">
+            <div class="res-row">
+              <span class="res-label">予約ID</span> 
+              <span class="res-id-badge">${safeId}</span>
+            </div>
             <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
             <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
             <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
@@ -413,13 +417,14 @@
             <div class="res-created">⏱ 受付時間：${res.createdAt}</div>
             <div class="btn-action-group">
               <button type="button" class="btn-change" 
+                      data-id="${safeId}" 
                       data-date="${res.date}" 
                       data-time="${res.time}" 
                       data-staff="${safeStaff}" 
                       data-menu="${safeMenu}" 
                       data-memo="${safeMemo}" 
                       onclick="startChangeMode(this)">日時を変更する</button>
-              <button type="button" class="btn-cancel" onclick="requestCancel('${res.date}', '${res.time}', '${res.staff}')">この予約をキャンセルする</button>
+              <button type="button" class="btn-cancel" data-id="${safeId}" onclick="requestCancel(this)">この予約をキャンセルする</button>
             </div>
           </div>
         `;
@@ -436,13 +441,14 @@
     }
   }
 
-  // 💡【Version 3.6.0 修正】変更モード起動時に oldMenu もオブジェクトに記憶させる
+  // 💡【Version 3.7.0 変更】予約IDをガッチリ記憶して変更モードへ
   function startChangeMode(buttonEl) {
     changeModeData = {
+      resId: buttonEl.getAttribute('data-id'), // 💡最重要：予約ID
       oldDate: buttonEl.getAttribute('data-date'),
       oldTime: buttonEl.getAttribute('data-time'),
       oldStaff: buttonEl.getAttribute('data-staff'),
-      oldMenu: buttonEl.getAttribute('data-menu') // 💡追加
+      oldMenu: buttonEl.getAttribute('data-menu')
     };
 
     staffSelect.value = changeModeData.oldStaff;
@@ -474,26 +480,19 @@
     timeSelect.disabled = true;
   }
 
-  async function requestCancel(date, time, staff) {
-    const dateParts = date.split('-');
-    const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : date;
+  // 💡【Version 3.7.0 変更】キャンセル時も予約IDのみを主キーとして送信
+  async function requestCancel(buttonEl) {
+    const resId = buttonEl.getAttribute('data-id');
+    if (!resId) return;
 
-    const confirmMessage = `以下のご予約をキャンセルしてもよろしいですか？\n\n・日時：${formattedDate} ${time}\n・担当：${staff}\n\n※この操作は取り消せません。`;
-    if (!confirm(confirmMessage)) return;
+    if (!confirm(`ご予約（ID: ${resId}）をキャンセルしてもよろしいですか？\n\n※この操作は取り消せません。`)) return;
 
-    const telInput = document.getElementById('check-tel').value.trim();
-    const emailInput = document.getElementById('check-email').value.trim();
     const resultsArea = document.getElementById('check-results-area');
-
     resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
 
     const formData = new URLSearchParams();
     formData.append('action', 'cancel');
-    formData.append('date', date);
-    formData.append('time', time);
-    formData.append('staff', staff);
-    formData.append('tel', telInput);
-    formData.append('email', emailInput);
+    formData.append('resId', resId); // 💡これだけ送ればGAS側でピンポイント処理できる
 
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
@@ -505,11 +504,10 @@
 
       if (data.success) {
         alert('ご予約のキャンセルが正常に完了しました。');
-        fetchReservations();
       } else {
         alert('キャンセルに失敗しました: ' + data.message);
-        fetchReservations();
       }
+      fetchReservations(); // 再読込
     } catch (error) {
       console.error('キャンセル通信エラー:', error);
       alert('通信エラーが発生しました。時間を置いて再度お試しください。');
