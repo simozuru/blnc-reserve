@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.1</title>
+  <title>SIS Web Reservation - ver 3.8.3</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -41,11 +41,9 @@
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
 
-    .change-alert-banner { display: none; background-color: #f4f0ec; border: 2px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #555; line-height: 1.6; }
+    .change-alert-banner { display: none; background-color: #f4f0ec; border: 2px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #555; }
     .change-alert-banner strong { color: var(--accent-color); }
-    /* 💡 変更「前」表記へスタイル調整 */
-    .change-info-detail { font-weight: bold; color: #333; margin: 6px 0; padding: 4px 8px; background-color: #fff; border-radius: 4px; border-left: 3px solid var(--accent-color); display: inline-block; }
-    .btn-cancel-change { background: none; border: none; color: var(--danger-color); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 5px; }
+    .btn-cancel-change { background: none; border: none; color: var(--danger-color); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 10px; }
 
     .reservation-card { border: 1px solid var(--border-color); border-left: 6px solid var(--accent-color); padding: 18px; border-radius: 8px; margin-bottom: 18px; background-color: #faf9f7; text-align: left; }
     .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
@@ -69,7 +67,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.1)</div>
+  <div class="subtitle">サロン予約システム (Version 3.8.3)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -78,7 +76,7 @@
 
   <div id="reserve-tab" class="tab-content active">
     <div id="change-banner" class="change-alert-banner">
-      <div id="change-banner-text">現在 <strong>【予約日時を変更中】</strong> です。</div>
+      現在 <strong>【予約日時を変更中】</strong> です。<br>
       新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。
       <button type="button" class="btn-cancel-change" onclick="abortChangeMode()">➔ 変更をやめる</button>
     </div>
@@ -177,8 +175,6 @@
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwei8theu7iZGKrj2owKh3DmtWmqpZs8HDkXBMwzkUgPWaMcUv4OkFQAt3V3JM4aCCw/exec";
 
   let changeModeData = null;
-  // 曜日計算用の共有基本マップ
-  const weekDays = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
 
   function switchTab(buttonEl, tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -295,6 +291,7 @@
       localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
     });
 
+    // 💡 URLSearchParams から 純粋な JSON オブジェクト形式での送信に変更
     const payload = {};
     
     if (changeModeData) {
@@ -318,7 +315,7 @@
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
-        body: JSON.stringify(payload), 
+        body: JSON.stringify(payload), // 💡 JSON文字列として送信
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
@@ -395,18 +392,7 @@
       
       result.reservations.forEach((res, index) => {
         const dateParts = res.date.split('-');
-        let formattedDate = res.date;
-        
-        // 💡【新機能】確認画面の一覧にも曜日を追加表示！
-        if (dateParts.length === 3) {
-          try {
-            const dObj = new Date(res.date.replace(/-/g, '/'));
-            const dayName = weekDays[dObj.getDay()];
-            formattedDate = `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日 (${dayName.charAt(0)})`;
-          } catch(e) {
-            formattedDate = `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日`;
-          }
-        }
+        const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
 
         const timeParts = res.time.split(':');
         const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
@@ -468,27 +454,6 @@
     document.getElementById('memo').value = buttonEl.getAttribute('data-memo');
     dateInput.value = changeModeData.oldDate;
 
-    let displayDateStr = changeModeData.oldDate; 
-    
-    try {
-      const dObj = new Date(changeModeData.oldDate.replace(/-/g, '/'));
-      const mm = String(dObj.getMonth() + 1).padStart(2, '0');
-      const dd = String(dObj.getDate()).padStart(2, '0');
-      const dayName = weekDays[dObj.getDay()];
-      displayDateStr = `${mm}/${dd} ${dayName}`;
-    } catch (e) {
-      console.error("日付パース失敗:", e);
-    }
-
-    // 💡【修正】変更「元」から変更「前」に変更！
-    const bannerTextEl = document.getElementById('change-banner-text');
-    bannerTextEl.innerHTML = `
-      現在 <strong>【予約日時を変更中】</strong> です。<br>
-      <div class="change-info-detail">
-        変更前：${displayDateStr} メニュー:${changeModeData.oldMenu} 担当:${changeModeData.oldStaff} 時間:${changeModeData.oldTime}
-      </div>
-    `;
-
     document.getElementById('change-banner').style.display = 'block';
     submitBtn.textContent = '上記の内容で変更を確定する';
 
@@ -522,6 +487,7 @@
     const resultsArea = document.getElementById('check-results-area');
     resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
 
+    // 💡 キャンセル処理も JSON 形式での送信に統一
     const payload = {
       action: 'cancel',
       resId: resId
