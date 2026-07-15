@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.8.3</title>
+  <title>SIS Web Reservation - ver 3.7.0</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -67,7 +67,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.8.3)</div>
+  <div class="subtitle">サロン予約システム (Version 3.7.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -90,7 +90,7 @@
       <div class="form-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <option value="指名なし">指名なし </option>
+          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
           <option value="下鶴">下鶴</option>
           <option value="来馬">来馬</option>
           <option value="矢野">矢野</option>
@@ -172,7 +172,7 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwIfm3FzwWCqXJ1q0Nvy9QYpudu-vNoA4mE3z-PTDXBNh46Zm74vvLU9VvEAItEKJgf/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxnSysf-MxksT1EYf6t9Kq9EiLSZcozXsOBU3zsPVkR3Z_Qq-ha9zUrPJGqN4KzwFw/exec";
 
   let changeModeData = null;
 
@@ -210,6 +210,7 @@
     element.addEventListener('change', updateAvailableTimes);
   });
 
+  // 💡【Version 3.7.0 修正】空き枠取得時に「予約ID」をパラメータに乗せる
   async function updateAvailableTimes() {
     const dateVal = dateInput.value;
     const staffVal = staffSelect.value;
@@ -229,6 +230,7 @@
     try {
       let fetchUrl = `${GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`;
       
+      // 💡 変更モード中なら「予約ID（resId）」を一緒に送る
       if (changeModeData && changeModeData.resId) {
         fetchUrl += `&resId=${encodeURIComponent(changeModeData.resId)}`;
       }
@@ -291,42 +293,41 @@
       localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
     });
 
-    // 💡 URLSearchParams から 純粋な JSON オブジェクト形式での送信に変更
-    const payload = {};
+    const formData = new URLSearchParams();
     
     if (changeModeData) {
-      payload.action = 'change';
-      payload.resId = changeModeData.resId;
-      payload.newDate = dateInput.value;
-      payload.newTime = timeSelect.value;
+      formData.append('action', 'change');
+      formData.append('resId', changeModeData.resId); // 💡【Version 3.7.0 変更】変更時は予約IDだけを主キーとして送信
+      formData.append('newDate', dateInput.value);
+      formData.append('newTime', timeSelect.value);
     } else {
-      payload.date = dateInput.value;
-      payload.time = timeSelect.value;
+      formData.append('date', dateInput.value);
+      formData.append('time', timeSelect.value);
     }
     
-    payload.staff = staffSelect.value;
-    payload.menu = menuSelect.value;
-    payload.name = document.getElementById('name').value;
-    payload.name_kana = document.getElementById('name_kana').value;
-    payload.tel = document.getElementById('tel').value;
-    payload.email = document.getElementById('email').value;
-    payload.memo = document.getElementById('memo').value;
+    formData.append('staff', staffSelect.value);
+    formData.append('menu', menuSelect.value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('name_kana', document.getElementById('name_kana').value);
+    formData.append('tel', document.getElementById('tel').value);
+    formData.append('email', document.getElementById('email').value);
+    formData.append('memo', document.getElementById('memo').value);
 
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
-        body: JSON.stringify(payload), // 💡 JSON文字列として送信
-        headers: { 'Content-Type': 'application/json' }
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       const data = await response.json();
       
-      if (data && data.success !== false) {
+      if (data.success) {
         if (changeModeData) {
           alert('ご予約の変更が正常に完了しました！');
           abortChangeMode();
         } else {
-          const resId = data.resId || data.id || '';
-          const msg = resId ? `ご予約が完了しました！\n【ご予約ID: ${resId}】` : 'ご予約が完了しました！';
+          // 新規予約時は、発行された予約IDをアラートで見せてあげることも可能
+          const msg = data.resId ? `ご予約が完了しました！\n【ご予約ID: ${data.resId}】` : 'ご予約が完了しました！';
           alert(msg);
         }
         
@@ -342,7 +343,7 @@
         });
         
       } else {
-        alert('処理に失敗しました: ' + (data.message || '未知のエラーが発生しました'));
+        alert('処理に失敗しました: ' + data.message);
       }
     } catch (error) {
       console.error('送信エラー:', error);
@@ -400,7 +401,7 @@
         const safeMenu = (res.menu || '').replace(/"/g, '&quot;');
         const safeStaff = (res.staff || '').replace(/"/g, '&quot;');
         const safeMemo = (res.memo || '').replace(/"/g, '&quot;');
-        const safeId = (res.id || '').replace(/"/g, '&quot;');
+        const safeId = (res.id || '').replace(/"/g, '&quot;'); // 💡【Version 3.7.0 変更】予約IDを安全に保持
 
         htmlContent += `
           <div class="reservation-card">
@@ -440,9 +441,10 @@
     }
   }
 
+  // 💡【Version 3.7.0 変更】予約IDをガッチリ記憶して変更モードへ
   function startChangeMode(buttonEl) {
     changeModeData = {
-      resId: buttonEl.getAttribute('data-id'), 
+      resId: buttonEl.getAttribute('data-id'), // 💡最重要：予約ID
       oldDate: buttonEl.getAttribute('data-date'),
       oldTime: buttonEl.getAttribute('data-time'),
       oldStaff: buttonEl.getAttribute('data-staff'),
@@ -478,6 +480,7 @@
     timeSelect.disabled = true;
   }
 
+  // 💡【Version 3.7.0 変更】キャンセル時も予約IDのみを主キーとして送信
   async function requestCancel(buttonEl) {
     const resId = buttonEl.getAttribute('data-id');
     if (!resId) return;
@@ -487,26 +490,24 @@
     const resultsArea = document.getElementById('check-results-area');
     resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
 
-    // 💡 キャンセル処理も JSON 形式での送信に統一
-    const payload = {
-      action: 'cancel',
-      resId: resId
-    };
+    const formData = new URLSearchParams();
+    formData.append('action', 'cancel');
+    formData.append('resId', resId); // 💡これだけ送ればGAS側でピンポイント処理できる
 
     try {
       const response = await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' }
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       const data = await response.json();
 
-      if (data && data.success !== false) {
+      if (data.success) {
         alert('ご予約のキャンセルが正常に完了しました。');
       } else {
-        alert('キャンセルに失敗しました: ' + (data.message || '未知のエラー'));
+        alert('キャンセルに失敗しました: ' + data.message);
       }
-      fetchReservations(); 
+      fetchReservations(); // 再読込
     } catch (error) {
       console.error('キャンセル通信エラー:', error);
       alert('通信エラーが発生しました。時間を置いて再度お試しください。');
