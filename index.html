@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.0</title>
+  <title>SIS Web Reservation - ver 3.9.1</title>
   <style>
     :root {
       --primary-color: #4a4a4a;
@@ -41,9 +41,9 @@
     .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
     .note { font-size: 12px; color: #666; margin-top: 5px; }
 
-    /* 💡 変更中バナーのデザイン改善調整（文字数増加へのケア） */
     .change-alert-banner { display: none; background-color: #f4f0ec; border: 2px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #555; line-height: 1.6; }
     .change-alert-banner strong { color: var(--accent-color); }
+    /* 💡 変更「前」表記へスタイル調整 */
     .change-info-detail { font-weight: bold; color: #333; margin: 6px 0; padding: 4px 8px; background-color: #fff; border-radius: 4px; border-left: 3px solid var(--accent-color); display: inline-block; }
     .btn-cancel-change { background: none; border: none; color: var(--danger-color); font-weight: bold; cursor: pointer; text-decoration: underline; margin-left: 5px; }
 
@@ -51,7 +51,6 @@
     .res-row { font-size: 15px; margin-bottom: 8px; color: #444; line-height: 1.4; }
     .res-label { font-weight: bold; color: var(--primary-color); display: inline-block; width: 85px; }
     .res-id-badge { display: inline-block; padding: 2px 6px; background-color: #e0d9d0; color: #555; font-size: 11px; font-weight: bold; border-radius: 4px; margin-left: 5px; }
-    .res-id-badge-inline { display: inline-block; padding: 1px 4px; background-color: #e0d9d0; color: #555; font-size: 10px; font-weight: bold; border-radius: 3px; vertical-align: middle; margin-top: -2px; }
     .res-created { font-size: 12px; color: #888; margin-top: 12px; border-top: 1px dashed #e0e0e0; padding-top: 8px; }
     
     .btn-action-group { display: flex; gap: 10px; margin-top: 12px; }
@@ -70,7 +69,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.0)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.1)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -78,7 +77,6 @@
   </div>
 
   <div id="reserve-tab" class="tab-content active">
-    <!-- 💡 バナー内部のテキスト構造をID管理して動的書き換え可能に変更 -->
     <div id="change-banner" class="change-alert-banner">
       <div id="change-banner-text">現在 <strong>【予約日時を変更中】</strong> です。</div>
       新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。
@@ -179,6 +177,8 @@
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwIfm3FzwWCqXJ1q0Nvy9QYpudu-vNoA4mE3z-PTDXBNh46Zm74vvLU9VvEAItEKJgf/exec";
 
   let changeModeData = null;
+  // 曜日計算用の共有基本マップ
+  const weekDays = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
 
   function switchTab(buttonEl, tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -395,7 +395,18 @@
       
       result.reservations.forEach((res, index) => {
         const dateParts = res.date.split('-');
-        const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
+        let formattedDate = res.date;
+        
+        // 💡【新機能】確認画面の一覧にも曜日を追加表示！
+        if (dateParts.length === 3) {
+          try {
+            const dObj = new Date(res.date.replace(/-/g, '/'));
+            const dayName = weekDays[dObj.getDay()];
+            formattedDate = `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日 (${dayName.charAt(0)})`;
+          } catch(e) {
+            formattedDate = `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日`;
+          }
+        }
 
         const timeParts = res.time.split(':');
         const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
@@ -443,7 +454,6 @@
     }
   }
 
-  // 💡 変更モード突入時に元の予約情報を解析してリッチなテキストでバナーへ反映する処理 [Version 3.9.0]
   function startChangeMode(buttonEl) {
     changeModeData = {
       resId: buttonEl.getAttribute('data-id'), 
@@ -458,8 +468,6 @@
     document.getElementById('memo').value = buttonEl.getAttribute('data-memo');
     dateInput.value = changeModeData.oldDate;
 
-    // 💡【新機能】変更元の情報をパースして曜日を含めた案内文を動的生成
-    const weekDays = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
     let displayDateStr = changeModeData.oldDate; 
     
     try {
@@ -472,12 +480,12 @@
       console.error("日付パース失敗:", e);
     }
 
-    // 💡 バナー書き換え（視認性を確保するためスマートなレイアウトで注入）
+    // 💡【修正】変更「元」から変更「前」に変更！
     const bannerTextEl = document.getElementById('change-banner-text');
     bannerTextEl.innerHTML = `
       現在 <strong>【予約日時を変更中】</strong> です。<br>
       <div class="change-info-detail">
-        変更元：${displayDateStr} メニュー:${changeModeData.oldMenu} 担当:${changeModeData.oldStaff} 時間:${changeModeData.oldTime}
+        変更前：${displayDateStr} メニュー:${changeModeData.oldMenu} 担当:${changeModeData.oldStaff} 時間:${changeModeData.oldTime}
       </div>
     `;
 
