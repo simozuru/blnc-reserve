@@ -127,6 +127,10 @@ form.addEventListener('submit', async (e) => {
     localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
   });
 
+  // 予約状況リロード用（変更完了後に使用）に連絡先情報を一時保持
+  const submittedTel = document.getElementById('tel').value;
+  const submittedEmail = document.getElementById('email').value;
+
   const formData = new URLSearchParams();
   
   if (changeModeData) {
@@ -143,8 +147,8 @@ form.addEventListener('submit', async (e) => {
   formData.append('menu', menuSelect.value);
   formData.append('name', document.getElementById('name').value);
   formData.append('name_kana', document.getElementById('name_kana').value);
-  formData.append('tel', document.getElementById('tel').value);
-  formData.append('email', document.getElementById('email').value);
+  formData.append('tel', submittedTel);
+  formData.append('email', submittedEmail);
   formData.append('memo', document.getElementById('memo').value);
 
   try {
@@ -156,7 +160,9 @@ form.addEventListener('submit', async (e) => {
     const data = await response.json();
     
     if (data.success) {
-      if (changeModeData) {
+      const isChangeMode = !!changeModeData; // 変更中だったかどうかのフラグを退避
+
+      if (isChangeMode) {
         alert('ご予約の変更が正常に完了しました！');
         abortChangeMode();
       } else {
@@ -164,8 +170,8 @@ form.addEventListener('submit', async (e) => {
         alert(msg);
       }
       
-      document.getElementById('check-tel').value = document.getElementById('tel').value;
-      document.getElementById('check-email').value = document.getElementById('email').value;
+      document.getElementById('check-tel').value = submittedTel;
+      document.getElementById('check-email').value = submittedEmail;
       form.reset();
       timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       timeSelect.disabled = true;
@@ -174,6 +180,13 @@ form.addEventListener('submit', async (e) => {
         const saved = localStorage.getItem(`sis_${field}`);
         if (saved) document.getElementById(field).value = saved;
       });
+
+      // 💡【追加】変更処理が正常完了した場合、確認タブへ切り替えて一覧をリロード
+      if (isChangeMode) {
+        const checkTabBtn = document.getElementById('tab-btn-check');
+        switchTab(checkTabBtn, 'check-tab');
+        await fetchReservations();
+      }
       
     } else {
       alert('処理に失敗しました: ' + data.message);
