@@ -44,7 +44,7 @@ CONFIG.STORAGE_FIELDS.forEach(field => {
   element.addEventListener('change', updateAvailableTimes);
 });
 
-// 空き時間枠のAPI取得と選択肢更新
+// 空き時間枠のAPI取得と選択肢更新 (★修正・最適化版)
 async function updateAvailableTimes() {
   const dateVal = dateInput.value;
   const staffVal = staffSelect.value;
@@ -79,10 +79,6 @@ async function updateAvailableTimes() {
       return;
     }
 
-    // 💡【追加】現在時刻を取得（判定用）
-    const now = new Date();
-    const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-
     const timeKeys = Object.keys(slotStatuses).sort();
     let selectableCount = 0;
 
@@ -91,16 +87,9 @@ async function updateAvailableTimes() {
       const option = document.createElement('option');
       option.value = timeStr;
 
-      // 💡【追加】当日かつ過去時刻の場合は強制的に無効化
-      let isPast = false;
-      if (dateVal === todayStr) {
-        const [h, m] = timeStr.split(':').map(Number);
-        const slotTime = new Date();
-        slotTime.setHours(h, m, 0, 0);
-        if (slotTime < now) isPast = true;
-      }
-
-      if (status === "○" && !isPast) {
+      // 💡 複雑なフロント側での過去時間判定(isPast)は完全撤去。
+      // 全てGAS(Availability.gs)が「○」「×」の判定を済ませてくれているため、それをそのまま信用します。
+      if (status === "○") {
         option.textContent = `${timeStr}  〇`;
         selectableCount++;
       } else {
@@ -122,6 +111,3 @@ async function updateAvailableTimes() {
     timeSelect.innerHTML = '<option value="">エラーが発生しました。再試行してください</option>';
   }
 }
-
-// （以下、変更・キャンセル等の処理は変更なしのため省略。全差し替え時は上記処理と組み合わせてください）
-// ※前回のファイル末尾までそのまま貼り付けて問題ありません
