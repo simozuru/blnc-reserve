@@ -1,13 +1,13 @@
 /**
  * =================================================================
- * Salon Information System (SIS) - script.js [Version 3.9.3]
+ * Salon Information System (SIS) - script.js [Version 3.9.1]
  * [フロントエンド制御・データキャッシュ・タブ切り替え・予約API連携]
  * =================================================================
  */
 
 // ⚙️ システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzQNleSsp46a-sU1N0p_dMzDPoCbNVpBLNcV9lOFQVTemgjqwTf_2dreSRBJWBPzBzw/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbw6vXjZpo5uJgjf6YMBxAMdEMma3z4MOgip9TAKcCNoTuIQ7DZfET9AGBBmyODaNLQP/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
@@ -56,6 +56,7 @@ function restoreCachedCustomerData() {
 }
 // 即時実行
 restoreCachedCustomerData();
+
 
 // 入力変更時の空き時間取得イベントを設定
 [dateInput, staffSelect, menuSelect].forEach(element => {
@@ -141,7 +142,7 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = changeModeData ? '予約を変更中...' : '予約を登録中...';
 
-  // 送信直前に入力データを確実にローカルストレージへ保存
+  // 💡送信直前に入力データを確実にローカルストレージへ保存
   CONFIG.STORAGE_FIELDS.forEach(field => {
     localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
   });
@@ -188,19 +189,22 @@ form.addEventListener('submit', async (e) => {
         alert(msg);
       }
       
+      // 💡確認用タブの入力欄を更新
       document.getElementById('check-tel').value = submittedTel;
       document.getElementById('check-email').value = submittedEmail;
 
-      // 入力選択系のみを安全にリセット
+      // 💡【キャッシュ保護の核心】form.reset() を使わず、入力選択系のみを安全にリセット
       dateInput.value = '';
-      staffSelect.selectedIndex = 0;
-      menuSelect.selectedIndex = 0;
+      staffSelect.selectedIndex = 0; // 「指名なし」へ戻す
+      menuSelect.selectedIndex = 0;  // 「選択してください」へ戻す
       timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       timeSelect.disabled = true;
       document.getElementById('memo').value = '';
 
+      // お客様の個人情報キャッシュを念のため再ロードして表示を固める
       restoreCachedCustomerData();
 
+      // 変更処理が正常完了した場合、確認タブへ切り替えて一覧をリロード
       if (isChangeMode) {
         const checkTabBtn = document.getElementById('tab-btn-check');
         switchTab(checkTabBtn, 'check-tab');
@@ -352,6 +356,7 @@ function abortChangeMode() {
 
   submitBtn.textContent = '上記の内容で予約を確定する';
   
+  // フォーム全体の初期化
   dateInput.value = '';
   staffSelect.selectedIndex = 0;
   menuSelect.selectedIndex = 0;
@@ -359,6 +364,7 @@ function abortChangeMode() {
   timeSelect.disabled = true;
   document.getElementById('memo').value = '';
   
+  // キャッシュから個人情報を再セット
   restoreCachedCustomerData();
 }
 
