@@ -1,6 +1,6 @@
 // ⚙️ システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzInbX9qDiNFuSgQNywkAVEs4Es5BTr-fnshuGifNmfwBs-1Vz5aoKN_y22kl7ZE6RT/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbwWmxu8zr_Q2-BstRl063k8W3quc-fD2sB9iYcC7JaJaaqE9QEYtwwnYLFHaN9Z55SS/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
@@ -44,7 +44,7 @@ CONFIG.STORAGE_FIELDS.forEach(field => {
   element.addEventListener('change', updateAvailableTimes);
 });
 
-// 空き時間枠のAPI取得と選択肢更新 (★修正・最適化版)
+// 空き時間枠のAPI取得と選択肢更新
 async function updateAvailableTimes() {
   const dateVal = dateInput.value;
   const staffVal = staffSelect.value;
@@ -87,8 +87,6 @@ async function updateAvailableTimes() {
       const option = document.createElement('option');
       option.value = timeStr;
 
-      // 💡 複雑なフロント側での過去時間判定(isPast)は完全撤去。
-      // 全てGAS(Availability.gs)が「○」「×」の判定を済ませてくれているため、それをそのまま信用します。
       if (status === "○") {
         option.textContent = `${timeStr}  〇`;
         selectableCount++;
@@ -109,5 +107,272 @@ async function updateAvailableTimes() {
   } catch (error) {
     console.error('通信エラー:', error);
     timeSelect.innerHTML = '<option value="">エラーが発生しました。再試行してください</option>';
+  }
+}
+
+// 予約登録・変更の送信処理
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const confirmMsg = changeModeData 
+    ? '選択した新しい日時で予約を変更してもよろしいですか？' 
+    : 'この内容で予約を確定してもよろしいですか？';
+    
+  if (!confirm(confirmMsg)) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = changeModeData ? '予約を変更中...' : '予約を登録中...';
+
+  CONFIG.STORAGE_FIELDS.forEach(field => {
+    localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
+  });
+
+  // 予約状況リロード用（変更完了後に使用）に連絡先情報を一時保持
+  const submittedTel = document.getElementById('tel').value;
+  const submittedEmail = document.getElementById('email').value;
+
+  const formData = new URLSearchParams();
+  
+  if (changeModeData) {
+    formData.append('action', 'change');
+    formData.append('resId', changeModeData.resId);
+    formData.append('newDate', dateInput.value);
+    formData.append('newTime', timeSelect.value);
+  } else {
+    formData.append('date', dateInput.value);
+    formData.append('time', timeSelect.value);
+  }
+  
+  formData.append('staff', staffSelect.value);
+  formData.append('menu', menuSelect.value);
+  formData.append('name', document.getElementById('name').value);
+  formData.append('name_kana', document.getElementById('name_kana').value);
+  formData.append('tel', submittedTel);
+  formData.append('email', submittedEmail);
+  formData.append('memo', document.getElementById('memo').value);
+
+  try {
+    const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      const isChangeMode = !!changeModeData; // 変更中だったかどうかのフラグを退避
+
+      if (isChangeMode) {
+        alert('ご予約の変更が正常に完了しました！');
+        abortChangeMode();
+      } else {
+        const msg = data.resId ? `ご予約が完了しました！\n【ご予約ID: ${data.resId}】` : 'ご予約が完了しました！';
+        alert(msg);
+      }
+      
+      document.getElementById('check-tel').value = submittedTel;
+      document.getElementById('check-email').value = submittedEmail;
+      form.reset();
+      timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
+      timeSelect.disabled = true;
+      
+      CONFIG.STORAGE_FIELDS.forEach(field => {
+        const saved = localStorage.getItem(`sis_${field}`);
+        if (saved) document.getElementById(field).value = saved;
+      });
+
+      // 💡【追加】変更処理が正常完了した場合、確認タブへ切り替えて一覧をリロード
+      if (isChangeMode) {
+        const checkTabBtn = document.getElementById('tab-btn-check');
+        switchTab(checkTabBtn, 'check-tab');
+        await fetchReservations();
+      }
+      
+    } else {
+      alert('処理に失敗しました: ' + data.message);
+    }
+  } catch (error) {
+    console.error('送信エラー:', error);
+    alert('通信エラーが発生しました。カレンダー等をご確認ください。');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '上記の内容で予約を確定する';
+    updateAvailableTimes();
+  }
+});
+
+// 予約状況の取得とカード描画
+async function fetchReservations() {
+  const telInput = document.getElementById('check-tel').value.trim();
+  const emailInput = document.getElementById('check-email').value.trim();
+  const resultsArea = document.getElementById('check-results-area');
+  const checkBtn = document.getElementById('check-btn');
+
+  if (!telInput || !emailInput) {
+    alert('携帯電話番号とメールアドレスの両方を入力してください。');
+    return;
+  }
+
+  checkBtn.disabled = true;
+  checkBtn.textContent = '検索中...';
+  resultsArea.innerHTML = '<div class="no-data">予約データを検索しています。少々お待ちください...</div>';
+
+  localStorage.setItem('sis_tel', telInput);
+  localStorage.setItem('sis_email', emailInput);
+
+  try {
+    const response = await fetch(`${CONFIG.GAS_WEB_APP_URL}?method=getCustomerReservations&tel=${encodeURIComponent(telInput)}&email=${encodeURIComponent(emailInput)}`);
+    if (!response.ok) throw new Error('通信エラーが発生しました');
+    
+    const result = await response.json();
+
+    if (!result.success) {
+      resultsArea.innerHTML = `<div class="no-data" style="color: red;">${result.message}</div>`;
+      return;
+    }
+
+    if (result.reservations.length === 0) {
+      resultsArea.innerHTML = '<div class="no-data">現在、条件に一致する今日以降のご予約はありません。</div>';
+      return;
+    }
+
+    let htmlContent = '<h3 style="font-size:14px; margin-bottom:15px; color:var(--primary-color);">お客様のご予約状況</h3>';
+    
+    result.reservations.forEach((res) => {
+      const dateParts = res.date.split('-');
+      const formattedDate = dateParts.length === 3 ? `${dateParts[0]}年${dateParts[1]}月${dateParts[2]}日` : res.date;
+
+      const timeParts = res.time.split(':');
+      const formattedTime = timeParts.length >= 2 ? `${timeParts[0]}時${timeParts[1]}分` : res.time;
+
+      const safeMenu = (res.menu || '').replace(/"/g, '&quot;');
+      const safeStaff = (res.staff || '').replace(/"/g, '&quot;');
+      const safeMemo = (res.memo || '').replace(/"/g, '&quot;');
+      const safeId = (res.id || '').replace(/"/g, '&quot;');
+
+      htmlContent += `
+        <div class="reservation-card">
+          <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
+          <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
+          <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
+          <div class="res-row"><span class="res-label">担当</span> ${res.staff}</div>
+          ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
+          <div class="res-row" style="margin-top: 10px; border-top: 1px dashed #e0e0e0; padding-top: 8px;">
+            <span class="res-label">予約ID</span> 
+            <span class="res-id-badge">${safeId}</span>
+          </div>
+          <div class="res-created" style="border-top: none; padding-top: 0; margin-top: 5px;">⏱ 受付時間：${res.createdAt}</div>
+          <div class="btn-action-group">
+            <button type="button" class="btn-change" 
+                    data-id="${safeId}" 
+                    data-date="${res.date}" 
+                    data-time="${res.time}" 
+                    data-staff="${safeStaff}" 
+                    data-menu="${safeMenu}" 
+                    data-memo="${safeMemo}" 
+                    onclick="startChangeMode(this)">日時を変更する</button>
+            <button type="button" class="btn-cancel" data-id="${safeId}" onclick="requestCancel(this)">この予約をキャンセルする</button>
+          </div>
+        </div>
+      `;
+    });
+
+    resultsArea.innerHTML = htmlContent;
+
+  } catch (error) {
+    console.error('予約検索エラー:', error);
+    resultsArea.innerHTML = '<div class="no-data" style="color: red;">エラーが発生しました。時間を置いて再度お試しください。</div>';
+  } finally {
+    checkBtn.disabled = false;
+    checkBtn.textContent = 'ご予約状況を確認する';
+  }
+}
+
+// 変更モードの開始設定
+function startChangeMode(buttonEl) {
+  changeModeData = {
+    resId: buttonEl.getAttribute('data-id'),
+    oldDate: buttonEl.getAttribute('data-date'),
+    oldTime: buttonEl.getAttribute('data-time'),
+    oldStaff: buttonEl.getAttribute('data-staff'),
+    oldMenu: buttonEl.getAttribute('data-menu')
+  };
+
+  staffSelect.value = changeModeData.oldStaff;
+  menuSelect.value = changeModeData.oldMenu;
+  document.getElementById('memo').value = buttonEl.getAttribute('data-memo');
+  dateInput.value = changeModeData.oldDate;
+
+  const prevDateParts = changeModeData.oldDate.split('-');
+  const formattedOldDate = prevDateParts.length === 3 ? `${prevDateParts[0]}年${prevDateParts[1]}月${prevDateParts[2]}日` : changeModeData.oldDate;
+  
+  document.getElementById('prev-id').textContent = changeModeData.resId;
+  document.getElementById('prev-datetime').textContent = `${formattedOldDate}  ${changeModeData.oldTime}`;
+  document.getElementById('prev-menu').textContent = changeModeData.oldMenu;
+  document.getElementById('prev-staff').textContent = changeModeData.oldStaff;
+
+  document.getElementById('change-banner').style.display = 'block';
+  submitBtn.textContent = '上記の内容で変更を確定する';
+
+  const reserveTabBtn = document.getElementById('tab-btn-reserve');
+  switchTab(reserveTabBtn, 'reserve-tab');
+
+  updateAvailableTimes();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 変更モードの中止
+function abortChangeMode() {
+  changeModeData = null;
+  document.getElementById('change-banner').style.display = 'none';
+  
+  document.getElementById('prev-id').textContent = '';
+  document.getElementById('prev-datetime').textContent = '';
+  document.getElementById('prev-menu').textContent = '';
+  document.getElementById('prev-staff').textContent = '';
+
+  submitBtn.textContent = '上記の内容で予約を確定する';
+  
+  form.reset();
+  CONFIG.STORAGE_FIELDS.forEach(field => {
+    const saved = localStorage.getItem(`sis_${field}`);
+    if (saved) document.getElementById(field).value = saved;
+  });
+  timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
+  timeSelect.disabled = true;
+}
+
+// キャンセルリクエスト送信
+async function requestCancel(buttonEl) {
+  const resId = buttonEl.getAttribute('data-id');
+  if (!resId) return;
+
+  if (!confirm(`ご予約（ID: ${resId}）をキャンセルしてもよろしいですか？\n\n※この操作は取り消せません。`)) return;
+
+  const resultsArea = document.getElementById('check-results-area');
+  resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
+
+  const formData = new URLSearchParams();
+  formData.append('action', 'cancel');
+  formData.append('resId', resId);
+
+  try {
+    const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      alert('ご予約のキャンセルが正常に完了しました。');
+    } else {
+      alert('キャンセルに失敗しました: ' + data.message);
+    }
+    fetchReservations();
+  } catch (error) {
+    console.error('キャンセル通信エラー:', error);
+    alert('通信エラーが発生しました。時間を置いて再度お試しください。');
+    fetchReservations();
   }
 }
