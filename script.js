@@ -25,19 +25,31 @@ const menuSelect = document.getElementById('menu');
 const timeSelect = document.getElementById('time');
 const submitBtn = document.getElementById('submit-btn');
 
-// --- 💡【新規追加】カレンダーの未来予約制限（max属性）の自動計算と適用 ---
-const now = new Date();
-const todayStr = now.toISOString().split('T')[0];
-dateInput.min = todayStr; // 今日の日付をカレンダーの最小値に設定
+// --- 💡【バグ修正版】カレンダーの過去・未来予約制限（JST対応・安全装置付き） ---
+try {
+  // 日本標準時（JST）の本日日付（YYYY-MM-DD形式）を安全に作成
+  const nowJST = new Date(Date.now() + (9 * 60 * 60 * 1000)); 
+  const todayStr = nowJST.toISOString().split('T')[0];
+  dateInput.min = todayStr; // 今日の日付を最小値にセット
 
-// HTML側に埋め込まれた制限日数を取得
-const bridgeEl = document.getElementById('gas-config-bridge');
-const maxFutureDays = bridgeEl ? parseInt(bridgeEl.getAttribute('data-max-future-days'), 10) : 30;
+  // HTML側に埋め込まれた制限日数を取得
+  const bridgeEl = document.getElementById('gas-config-bridge');
+  let maxFutureDays = 30; // 万が一取得できなかった場合のデフォルト値
+  
+  if (bridgeEl) {
+    const rawDays = bridgeEl.getAttribute('data-max-future-days');
+    if (rawDays && !isNaN(rawDays)) {
+      maxFutureDays = parseInt(rawDays, 10);
+    }
+  }
 
-// 今日から数えて〇日後の日付オブジェクトを生成
-const maxDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate() + maxFutureDays);
-const maxDateStr = maxDateObj.toISOString().split('T')[0];
-dateInput.max = maxDateStr; // 計算された未来日付を上限としてセット（それ以降はグレーアウト）
+  // 本日から「最大未来日数」を加算した日付（JST基準）を計算
+  const maxDateObj = new Date(nowJST.getTime() + (maxFutureDays * 24 * 60 * 60 * 1000));
+  const maxDateStr = maxDateObj.toISOString().split('T')[0];
+  dateInput.max = maxDateStr; // 計算された未来日付を上限としてセット
+} catch (configError) {
+  console.error("カレンダー限界値の設定中にエラーが発生しました。制限を解除して実行します:", configError);
+}
 
 
 // ローカルストレージから前回入力値を復元
@@ -264,7 +276,7 @@ async function fetchReservations() {
       htmlContent += `
         <div class="reservation-card">
           <div class="res-row"><span class="res-label">予約日</span> ${formattedDate}</div>
-          <div class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
+          <div class="res-row"><span class="res-row"><span class="res-label">予約時間</span> ${formattedTime}</div>
           <div class="res-row"><span class="res-label">メニュー</span> ${res.menu}</div>
           <div class="res-row"><span class="res-label">担当</span> ${res.staff}</div>
           ${res.memo ? `<div class="res-row"><span class="res-label">備考・メモ</span> ${res.memo}</div>` : ''}
