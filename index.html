@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.8.4</title>
+  <title>SIS Web Reservation - ver 3.9.0</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- 💡 GAS側から渡された未来制限日数を一時的に保持する隠し属性 -->
+<div id="gas-config-bridge" data-max-future-days="<?= maxFutureDays ?>" style="display: none;"></div>
+
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.8.4)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>

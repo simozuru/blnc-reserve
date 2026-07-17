@@ -1,6 +1,6 @@
 // ⚙️ システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbwWmxu8zr_Q2-BstRl063k8W3quc-fD2sB9iYcC7JaJaaqE9QEYtwwnYLFHaN9Z55SS/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbxcyMqa5yVmf7nVXpBHaexaikcYfNbc3FLgHFY1D37sWMzGkteZYunc7-8vCzEHLIVa/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
@@ -25,9 +25,20 @@ const menuSelect = document.getElementById('menu');
 const timeSelect = document.getElementById('time');
 const submitBtn = document.getElementById('submit-btn');
 
-// 今日の日付をカレンダーの最小値に設定
-const today = new Date().toISOString().split('T')[0];
-dateInput.min = today;
+// --- 💡【新規追加】カレンダーの未来予約制限（max属性）の自動計算と適用 ---
+const now = new Date();
+const todayStr = now.toISOString().split('T')[0];
+dateInput.min = todayStr; // 今日の日付をカレンダーの最小値に設定
+
+// HTML側に埋め込まれた制限日数を取得
+const bridgeEl = document.getElementById('gas-config-bridge');
+const maxFutureDays = bridgeEl ? parseInt(bridgeEl.getAttribute('data-max-future-days'), 10) : 30;
+
+// 今日から数えて〇日後の日付オブジェクトを生成
+const maxDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate() + maxFutureDays);
+const maxDateStr = maxDateObj.toISOString().split('T')[0];
+dateInput.max = maxDateStr; // 計算された未来日付を上限としてセット（それ以降はグレーアウト）
+
 
 // ローカルストレージから前回入力値を復元
 CONFIG.STORAGE_FIELDS.forEach(field => {
