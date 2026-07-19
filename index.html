@@ -5,129 +5,130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SIS Web Reservation - ver 3.9.6</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
-  <link rel="stylesheet" href="style.css"> <!--[cite: 5] -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- 💡 GAS側から渡された未来制限日数を一時的に保持する隠し属性 -->
-<div id="gas-config-bridge" data-max-future-days="<?= maxFutureDays ?>" style="display: none;"></div> <!--[cite: 5] -->
+<div id="gas-config-bridge" data-max-future-days="<?= maxFutureDays ?>" style="display: none;"></div>
 
-<div class="container"> <!--[cite: 5] -->
-  <h1>SIS WEB RESERVATION</h1> <!--[cite: 5] -->
+<div class="container">
+  <h1>SIS WEB RESERVATION</h1>
   <div class="subtitle">サロン予約システム (Version 3.9.6)</div>
 
-  <div class="tabs"> <!--[cite: 5] -->
-    <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button> <!--[cite: 5] -->
-    <button id="tab-btn-check" class="tab-btn" onclick="switchTab(this, 'check-tab')">予約の確認・キャンセル</button> <!--[cite: 5] -->
-  </div> <!--[cite: 5] -->
+  <div class="tabs">
+    <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
+    <button id="tab-btn-check" class="tab-btn" onclick="switchTab(this, 'check-tab')">予約の確認・キャンセル</button>
+  </div>
 
-  <div id="reserve-tab" class="tab-content active"> <!--[cite: 5] -->
-    <div id="change-banner" class="change-alert-banner"> <!--[cite: 5] -->
-      現在 <strong>【予約日時を変更中】</strong> です。<br> <!--[cite: 5] -->
-      <div style="margin: 10px 0; padding: 10px; background-color: #ffffff; border-radius: 4px; border-left: 4px solid var(--accent-color); font-size: 13px; text-align: left;"> <!--[cite: 5] -->
-        <strong style="display: block; margin-bottom: 5px; color: var(--accent-color);">【変更前の予約内容】</strong> <!--[cite: 5] -->
-        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">日時:</span><span id="prev-datetime" style="font-weight: bold;"></span></div> <!--[cite: 5] -->
-        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">メニュー:</span><span id="prev-menu" style="font-weight: bold;"></span></div> <!--[cite: 5] -->
-        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">担当者:</span><span id="prev-staff" style="font-weight: bold;"></span></div> <!--[cite: 5] -->
-        <div><span class="res-label" style="width: 70px;">予約ID:</span><span id="prev-id" style="font-weight: bold;"></span></div> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
-      新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。 <!--[cite: 5] -->
-      <button type="button" class="btn-cancel-change" onclick="abortChangeMode()">➔ 変更をやめる</button> <!--[cite: 5] -->
-    </div> <!--[cite: 5] -->
+  <div id="reserve-tab" class="tab-content active">
+    <div id="change-banner" class="change-alert-banner">
+      現在 <strong>【予約日時を変更中】</strong> です。<br>
+      <div style="margin: 10px 0; padding: 10px; background-color: #ffffff; border-radius: 4px; border-left: 4px solid var(--accent-color); font-size: 13px; text-align: left;">
+        <strong style="display: block; margin-bottom: 5px; color: var(--accent-color);">【変更前の予約内容】</strong>
+        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">日時:</span><span id="prev-datetime" style="font-weight: bold;"></span></div>
+        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">メニュー:</span><span id="prev-menu" style="font-weight: bold;"></span></div>
+        <div style="margin-bottom: 3px;"><span class="res-label" style="width: 70px;">担当者:</span><span id="prev-staff" style="font-weight: bold;"></span></div>
+        <div><span class="res-label" style="width: 70px;">予約ID:</span><span id="prev-id" style="font-weight: bold;"></span></div>
+      </div>
+      新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。
+      <button type="button" class="btn-cancel-change" onclick="abortChangeMode()">➔ 変更をやめる</button>
+    </div>
 
-    <form id="reservation-form"> <!--[cite: 5] -->
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="date">ご来店希望日 *</label> <!--[cite: 5] -->
-        <input type="date" id="date" required> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+    <form id="reservation-form">
+      <div class="form-group">
+        <label for="date">ご来店希望日 *</label>
+        <input type="date" id="date" required>
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="staff">担当スタッフ *</label> <!--[cite: 5] -->
-        <select id="staff" required> <!--[cite: 5] -->
-          <option value="指名なし">指名なし (店舗全体の空き状況)</option> <!--[cite: 5] -->
-          <!-- 💡【リファクタリング】Config.gsのマスターから読み込んだスタッフ名でプルダウンを動的生成 -->
-          <? for (let i = 0; i < staffList.length; i++) { ?>
-            <option value="<?= staffList[i] ?>"><?= staffList[i] ?></option>
+      <div class="form-group">
+        <label for="staff">担当スタッフ *</label>
+        <select id="staff" required>
+          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
+          <!-- 💡 GASのテンプレート記法に正しく合わせたループ処理に変更 -->
+          <? for (var i = 0; i < staffList.length; i++) { 
+               var sName = staffList[i]; ?>
+            <option value="<?= sName ?>"><?= sName ?></option>
           <? } ?>
-        </select> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+        </select>
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="menu">施術メニュー *</label> <!--[cite: 5] -->
-        <select id="menu" required> <!--[cite: 5] -->
-          <option value="">メニューを選択してください</option> <!--[cite: 5] -->
-          <option value="カット">カット</option> <!--[cite: 5] -->
-          <option value="カラー">カラー</option> <!--[cite: 5] -->
-          <option value="パーマ">パーマ</option> <!--[cite: 5] -->
-          <option value="縮毛矯正">縮毛矯正</option> <!--[cite: 5] -->
-        </select> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="menu">施術メニュー *</label>
+        <select id="menu" required>
+          <option value="">メニューを選択してください</option>
+          <option value="カット">カット</option>
+          <option value="カラー">カラー</option>
+          <option value="パーマ">パーマ</option>
+          <option value="縮毛矯正">縮毛矯正</option>
+        </select>
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="time">ご来店希望時間 *</label> <!--[cite: 5] -->
-        <select id="time" required disabled> <!--[cite: 5] -->
-          <option value="">日付を選択してください</option> <!--[cite: 5] -->
-        </select> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="time">ご来店希望時間 *</label>
+        <select id="time" required disabled>
+          <option value="">日付を選択してください</option>
+        </select>
+      </div>
 
-      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;"> <!--[cite: 5] -->
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="name">お名前 (漢字) *</label> <!--[cite: 5] -->
-        <input type="text" id="name" required placeholder="山田 太郎"> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="name">お名前 (漢字) *</label>
+        <input type="text" id="name" required placeholder="山田 太郎">
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="name_kana">お名前 (フリガナ) *</label> <!--[cite: 5] -->
-        <input type="text" id="name_kana" required placeholder="ヤマダ タロウ"> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="name_kana">お名前 (フリガナ) *</label>
+        <input type="text" id="name_kana" required placeholder="ヤマダ タロウ">
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="tel">携帯電話番号 *</label> <!--[cite: 5] -->
-        <input type="tel" id="tel" required placeholder="09012345678" pattern="^[0-9\-]+$"> <!--[cite: 5] -->
-        <div class="note">ハイフンはあってもなくても構いません</div> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="tel">携帯電話番号 *</label>
+        <input type="tel" id="tel" required placeholder="09012345678" pattern="^[0-9\-]+$">
+        <div class="note">ハイフンはあってもなくても構いません</div>
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="email">メールアドレス *</label> <!--[cite: 5] -->
-        <input type="email" id="email" required placeholder="example@gmail.com"> <!--[cite: 5] -->
-        <div class="note">予約の確認・自動キャンセル時に使用します</div> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="email">メールアドレス *</label>
+        <input type="email" id="email" required placeholder="example@gmail.com">
+        <div class="note">予約の確認・自動キャンセル時に使用します</div>
+      </div>
 
-      <div class="form-group"> <!--[cite: 5] -->
-        <label for="memo">ご要望・備考</label> <!--[cite: 5] -->
-        <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea> <!--[cite: 5] -->
-      </div> <!--[cite: 5] -->
+      <div class="form-group">
+        <label for="memo">ご要望・備考</label>
+        <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
+      </div>
 
-      <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button> <!--[cite: 5] -->
-    </form> <!--[cite: 5] -->
-  </div> <!--[cite: 5] -->
+      <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
+    </form>
+  </div>
 
-  <div id="check-tab" class="tab-content"> <!--[cite: 5] -->
-    <div class="form-group"> <!--[cite: 5] -->
-      <label for="check-tel">ご登録の携帯電話番号</label> <!--[cite: 5] -->
-      <input type="tel" id="check-tel" placeholder="09012345678"> <!--[cite: 5] -->
-    </div> <!--[cite: 5] -->
+  <div id="check-tab" class="tab-content">
+    <div class="form-group">
+      <label for="check-tel">ご登録の携帯電話番号</label>
+      <input type="tel" id="check-tel" placeholder="09012345678">
+    </div>
     
-    <div class="form-group"> <!--[cite: 5] -->
-      <label for="check-email">ご登録のメールアドレス</label> <!--[cite: 5] -->
-      <input type="email" id="check-email" placeholder="example@gmail.com"> <!--[cite: 5] -->
-      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」で検索します。</div> <!--[cite: 5] -->
-    </div> <!--[cite: 5] -->
+    <div class="form-group">
+      <label for="check-email">ご登録のメールアドレス</label>
+      <input type="email" id="check-email" placeholder="example@gmail.com">
+      <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」で検索します。</div>
+    </div>
     
-    <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button> <!--[cite: 5] -->
+    <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button>
 
-    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;"> <!--[cite: 5] -->
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
     
-    <div id="check-results-area"> <!--[cite: 5] -->
-      <div class="no-data">情報を入力して確認ボタンを押してください。</div> <!--[cite: 5] -->
-    </div> <!--[cite: 5] -->
-  </div> <!--[cite: 5] -->
+    <div id="check-results-area">
+      <div class="no-data">情報を入力して確認ボタンを押してください。</div>
+    </div>
+  </div>
 
-</div> <!--[cite: 5] -->
+</div>
 
 <!-- 💡 システム制御ファイルを外部から読み込み -->
-<script src="script.js"></script> <!--[cite: 5] -->
+<script src="script.js"></script>
 
 </body>
 </html>
