@@ -50,29 +50,82 @@ function restoreCachedCustomerData() {
 // 即時実行
 restoreCachedCustomerData();
 
+// ==========================================
+// 💡【プランB新設】システム設定の初期ロードとUI動的変更ロジック
+// ==========================================
+async function initializeSystemSettings() {
+  try {
+    // 1. カレンダーの過去制限（当日は常に最低限セット）
+    const nowJST = new Date(Date.now() + (9 * 60 * 60 * 1000)); 
+    const todayStr = nowJST.toISOString().split('T')[0];
+    dateInput.min = todayStr;
 
-// --- カレンダーの過去・未来予約制限（JST対応・安全装置付き） ---
-try {
-  const nowJST = new Date(Date.now() + (9 * 60 * 60 * 1000)); 
-  const todayStr = nowJST.toISOString().split('T')[0];
-  dateInput.min = todayStr;
+    // 2. Code.gsのgetSystemSettings窓口から最新の設定値を取得
+    const response = await fetch(`${CONFIG.GAS_WEB_APP_URL}?method=getSystemSettings`);
+    if (!response.ok) throw new Error('設定データの取得に失敗しました');
+    const settings = await response.json();
 
-  const bridgeEl = document.getElementById('gas-config-bridge');
-  let maxFutureDays = 30;
-  
-  if (bridgeEl) {
-    const rawDays = bridgeEl.getAttribute('data-max-future-days');
-    if (rawDays && !isNaN(rawDays)) {
-      maxFutureDays = parseInt(rawDays, 10);
+    if (!settings.success) {
+      console.error("サーバー側での設定取得エラー:", settings.message);
+      return;
     }
-  }
 
-  const maxDateObj = new Date(nowJST.getTime() + (maxFutureDays * 24 * 60 * 60 * 1000));
-  const maxDateStr = maxDateObj.toISOString().split('T')[0];
-  dateInput.max = maxDateStr;
-} catch (configError) {
-  console.error("カレンダー限界値の設定中にエラーが発生しました:", configError);
+    // 3. 未来予約制限日数を動的適用
+    const maxFutureDays = settings.maxFutureDays || 30;
+    const maxDateObj = new Date(nowJST.getTime() + (maxFutureDays * 24 * 60 * 60 * 1000));
+    const maxDateStr = maxDateObj.toISOString().split('T')[0];
+    dateInput.max = maxDateStr;
+
+    // 4. スタッフプルダウンおよび表示グループの動的組み立て
+    const staffGroup = document.getElementById('staff-group');
+    staffSelect.innerHTML = ''; // 既存の選択肢をクリア
+
+    if (settings.showStaffSelector === false) {
+      // 担当スタッフ選択欄自体を非表示にする（1人サロン向け）
+      if (staffGroup) staffGroup.style.display = 'none';
+      
+      // 画面上は見えないが、裏側の空き枠計算のために「最初のスタッフ」を自動選択状態にする
+      if (settings.staffList && settings.staffList.length > 0) {
+        staffSelect.innerHTML = `<option value="${settings.staffList[0]}">${settings.staffList[0]}</option>`;
+        staffSelect.value = settings.staffList[0];
+      }
+    } else {
+      // 通常の複数人サロン表示
+      if (staffGroup) staffGroup.style.display = 'block';
+
+      // 「指名なし」の選択肢を許可する場合のみ先頭に追加
+      if (settings.allowNoAssign === true) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '指名なし';
+        defaultOpt.textContent = '指名なし (店舗全体の空き状況)';
+        staffSelect.appendChild(defaultOpt);
+      } else {
+        // 完全指名制などで指名なしがない場合はプレースホルダーを配置
+        const placeholderOpt = document.createElement('option');
+        placeholderOpt.value = '';
+        placeholderOpt.textContent = '担当スタッフを選択してください';
+        placeholderOpt.disabled = true;
+        placeholderOpt.selected = true;
+        staffSelect.appendChild(placeholderOpt);
+      }
+
+      // Configから取得したスタッフ一覧を動的に追加
+      if (settings.staffList && settings.staffList.length > 0) {
+        settings.staffList.forEach(staffName => {
+          const opt = document.createElement('option');
+          opt.value = staffName;
+          opt.textContent = staffName;
+          staffSelect.appendChild(opt);
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error("システム設定の初期化中にエラーが発生しました:", error);
+  }
 }
+// ページ読み込み時に実行
+window.addEventListener('DOMContentLoaded', initializeSystemSettings);
 
 
 // 入力変更時の空き時間取得イベントを設定
@@ -86,6 +139,7 @@ async function updateAvailableTimes() {
   const staffVal = staffSelect.value;
   const menuVal = menuSelect.value;
 
+  // 完全指名制などで未選択状態（""）の場合は処理を中断
   if (!dateVal || !staffVal || !menuVal) {
     timeSelect.disabled = true;
     timeSelect.innerHTML = '<option value="">日時とメニューを選択してください</option>';
@@ -212,7 +266,7 @@ form.addEventListener('submit', async (e) => {
 
       // 💡【キャッシュ保護の核心】form.reset() を使わず、入力選択系のみを安全にリセット
       dateInput.value = '';
-      staffSelect.selectedIndex = 0; // 「指名なし」へ戻す
+      staffSelect.selectedIndex = 0; 
       menuSelect.selectedIndex = 0;  // 「選択してください」へ戻す
       timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       timeSelect.disabled = true;
@@ -220,6 +274,9 @@ form.addEventListener('submit', async (e) => {
 
       // お客様の個人情報キャッシュを念のため再ロードして表示を固める
       restoreCachedCustomerData();
+
+      // 初期UI設定（スタッフ表示ロジック）を再適用して整合性を保つ
+      initializeSystemSettings();
 
       // 変更処理が正常完了した場合、確認タブへ切り替えて一覧をリロード
       if (isChangeMode) {
@@ -383,6 +440,9 @@ function abortChangeMode() {
   
   // キャッシュから個人情報を再セット
   restoreCachedCustomerData();
+  
+  // 初期UI設定を再適用
+  initializeSystemSettings();
 }
 
 // キャンセルリクエスト送信
