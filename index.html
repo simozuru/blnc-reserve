@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.6</title>
+  <title>SIS Web Reservation - ver 3.9.0</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +14,7 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.6)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -45,11 +45,9 @@
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
           <option value="指名なし">指名なし (店舗全体の空き状況)</option>
-          <!-- 💡 GASのテンプレート解析エラーを回避するため、varによる宣言と変数の切り出しを採用 -->
-          <? for (var i = 0; i < staffList.length; i++) { 
-               var sName = staffList[i]; ?>
-            <option value="<?= sName ?>"><?= sName ?></option>
-          <? } ?>
+          <option value="下鶴">下鶴</option>
+          <option value="来馬">来馬</option>
+          <option value="矢野">矢野</option>
         </select>
       </div>
 
