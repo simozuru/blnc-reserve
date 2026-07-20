@@ -1,6 +1,6 @@
 // ⚙️ システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyDWyzAOeiTBZTuyCX38sKAJIN0ej5-Nw6fHjpmmOG8o9yWfyEPtBSIQm9Z94kE_bqh/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycby6HuVXELe9TT8RherZ4a9FeD2BUg0llMgIEwPD0E6b06eGALWftSPm1KhrJ1Vngjwm/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
@@ -118,17 +118,6 @@ async function initializeSystemSettings() {
           staffSelect.appendChild(opt);
         });
       }
-    }
-
-    // 💡 5. メニュープルダウンの動的組み立て
-    if (settings.menuList && settings.menuList.length > 0) {
-      menuSelect.innerHTML = '<option value="">メニューを選択してください</option>';
-      settings.menuList.forEach(menuName => {
-        const opt = document.createElement('option');
-        opt.value = menuName;
-        opt.textContent = menuName;
-        menuSelect.appendChild(opt);
-      });
     }
 
   } catch (error) {
