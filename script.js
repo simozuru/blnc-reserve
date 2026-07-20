@@ -250,8 +250,7 @@ async function updateAvailableTimes() {
 // 💡【共通】ポスト送信処理（JSON形式一元化）
 // ==========================================
 async function postReservationData(reservationObj) {
-  // 💡【CORS対策】Preflight(OPTIONS)による送信ブロックを回避するため、
-  // あえて headers オプションを付与せずプレーンなテキストとして送信します。
+  // CORS対策のため headers オプションを付与せずプレーンテキストとして送信
   const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify(reservationObj)
@@ -389,6 +388,7 @@ async function fetchReservations() {
       const safeStaff = (res.staff || '').replace(/"/g, '&quot;');
       const safeMemo = (res.memo || '').replace(/"/g, '&quot;');
       const safeId = (res.id || '').replace(/"/g, '&quot;');
+      const safeName = (res.customerName || 'お客様').replace(/"/g, '&quot;');
 
       htmlContent += `
         <div class="reservation-card">
@@ -409,6 +409,7 @@ async function fetchReservations() {
                     data-time="${res.time}" 
                     data-staff="${safeStaff}" 
                     data-menu="${safeMenu}" 
+                    data-name="${safeName}"
                     data-memo="${safeMemo}">日時を変更する</button>
             <button type="button" class="btn-cancel" 
                     data-id="${safeId}"
@@ -416,6 +417,7 @@ async function fetchReservations() {
                     data-time="${res.time}" 
                     data-staff="${safeStaff}" 
                     data-menu="${safeMenu}" 
+                    data-name="${safeName}"
                     data-memo="${safeMemo}">この予約をキャンセルする</button>
           </div>
         </div>
@@ -447,6 +449,12 @@ function startChangeMode(buttonEl) {
   menuSelect.value = changeModeData.oldMenu;
   document.getElementById('memo').value = buttonEl.getAttribute('data-memo');
   dateInput.value = changeModeData.oldDate;
+
+  // 💡 確認カードから引き継いだ名前を入力欄にセットして整合性を保つ
+  const nameInput = document.getElementById('name');
+  if (nameInput) {
+    nameInput.value = buttonEl.getAttribute('data-name') || '';
+  }
 
   const prevDateParts = changeModeData.oldDate.split('-');
   const formattedOldDate = prevDateParts.length === 3 ? `${prevDateParts[0]}年${prevDateParts[1]}月${prevDateParts[2]}日` : changeModeData.oldDate;
@@ -499,6 +507,7 @@ async function requestCancel(buttonEl) {
   const resultsArea = document.getElementById('check-results-area');
   resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
 
+  // 💡 送信パラメータの名前欄に、フォーム値ではなくカードから直接取得した「data-name」を指定
   const reservationData = {
     resId: resId,
     isCancel: true,
@@ -506,7 +515,7 @@ async function requestCancel(buttonEl) {
     time: buttonEl.getAttribute('data-time'),
     staff: buttonEl.getAttribute('data-staff'),
     menu: buttonEl.getAttribute('data-menu'),
-    name: document.getElementById('name').value, 
+    name: buttonEl.getAttribute('data-name') || 'お客様', 
     tel: document.getElementById('check-tel').value.trim(),
     email: document.getElementById('check-email').value.trim(),
     memo: buttonEl.getAttribute('data-memo')
