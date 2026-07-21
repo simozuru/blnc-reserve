@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.0</title>
+  <title>SIS Web Reservation - ver 3.9.6</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- 💡 GAS側から渡された未来制限日数を一時的に保持する隠し属性 -->
-<div id="gas-config-bridge" data-max-future-days="<?= maxFutureDays ?>" style="display: none;"></div>
+<!-- 💡【プランB改善】GAS同期バグを防ぐため埋め込み構文を完全に排除。設定値は後からJSで格納します -->
+<div id="gas-config-bridge" style="display: none;"></div>
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.0)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.6)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
@@ -41,13 +41,11 @@
         <input type="date" id="date" required>
       </div>
 
-      <div class="form-group">
+      <!-- 💡【可変対応】表示・非表示をJSで自在に切り替えられるよう、id="staff-group" を追加 -->
+      <div class="form-group" id="staff-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <option value="指名なし">指名なし (店舗全体の空き状況)</option>
-          <option value="下鶴">下鶴</option>
-          <option value="来馬">来馬</option>
-          <option value="矢野">矢野</option>
+          <!-- 💡 固定のスタッフ名は完全排除。Configの設定に沿ってJSが自動で組み立てます -->
         </select>
       </div>
 
