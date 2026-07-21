@@ -1,6 +1,6 @@
 // ⚙️ システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycby2ew__ABjfPNvvcpHxvLJH2n4jByNgNTULhWC_oYvP5SK-65lE6nRbqKQvGGIDq03r/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbwpr3MBfWgfAJh8iRUjBXjZAGaGII50v8blE5Qb-dzNn9Tu2yNTwcw61B4OH33Kl8pP/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
@@ -118,6 +118,32 @@ async function initializeSystemSettings() {
           staffSelect.appendChild(opt);
         });
       }
+    }
+
+    // 5. 💡【新規追加】メニュープルダウンの動的組み立て
+    menuSelect.innerHTML = ''; // 既存の選択肢をクリア
+    
+    // 初期選択用のプレースホルダーを先頭に配置
+    const menuPlaceholder = document.createElement('option');
+    menuPlaceholder.value = '';
+    menuPlaceholder.textContent = 'メニューを選択してください';
+    menuPlaceholder.disabled = true;
+    menuPlaceholder.selected = true;
+    menuSelect.appendChild(menuPlaceholder);
+
+    // サーバーから取得したメニュー一覧を動的に追加
+    if (settings.menuList && settings.menuList.length > 0) {
+      settings.menuList.forEach(menuName => {
+        const opt = document.createElement('option');
+        opt.value = menuName;
+        opt.textContent = menuName;
+        menuSelect.appendChild(opt);
+      });
+    }
+
+    // 💡変更モード中であれば、退避されていた選択値を再反映する
+    if (changeModeData && changeModeData.oldMenu) {
+      menuSelect.value = changeModeData.oldMenu;
     }
 
   } catch (error) {
@@ -266,8 +292,8 @@ form.addEventListener('submit', async (e) => {
 
       // 💡【キャッシュ保護の核心】form.reset() を使わず、入力選択系のみを安全にリセット
       dateInput.value = '';
-      staffSelect.selectedIndex = 0; 
-      menuSelect.selectedIndex = 0;  // 「選択してください」へ戻す
+      if (staffSelect.options.length > 0) staffSelect.selectedIndex = 0; 
+      if (menuSelect.options.length > 0) menuSelect.selectedIndex = 0;  // 「選択してください」へ戻す
       timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
       timeSelect.disabled = true;
       document.getElementById('memo').value = '';
@@ -275,8 +301,8 @@ form.addEventListener('submit', async (e) => {
       // お客様の個人情報キャッシュを念のため再ロードして表示を固める
       restoreCachedCustomerData();
 
-      // 初期UI設定（スタッフ表示ロジック）を再適用して整合性を保つ
-      initializeSystemSettings();
+      // 初期UI設定（スタッフ・メニュー表示ロジック）を再適用して整合性を保つ
+      await initializeSystemSettings();
 
       // 変更処理が正常完了した場合、確認タブへ切り替えて一覧をリロード
       if (isChangeMode) {
@@ -386,7 +412,7 @@ async function fetchReservations() {
 }
 
 // 変更モードの開始設定
-function startChangeMode(buttonEl) {
+async function startChangeMode(buttonEl) {
   changeModeData = {
     resId: buttonEl.getAttribute('data-id'),
     oldDate: buttonEl.getAttribute('data-date'),
@@ -394,6 +420,9 @@ function startChangeMode(buttonEl) {
     oldStaff: buttonEl.getAttribute('data-staff'),
     oldMenu: buttonEl.getAttribute('data-menu')
   };
+
+  // 初期化を待ってから選択値を適用する
+  await initializeSystemSettings();
 
   staffSelect.value = changeModeData.oldStaff;
   menuSelect.value = changeModeData.oldMenu;
@@ -432,8 +461,8 @@ function abortChangeMode() {
   
   // フォーム全体の初期化
   dateInput.value = '';
-  staffSelect.selectedIndex = 0;
-  menuSelect.selectedIndex = 0;
+  if (staffSelect.options.length > 0) staffSelect.selectedIndex = 0;
+  if (menuSelect.options.length > 0) menuSelect.selectedIndex = 0;
   timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
   timeSelect.disabled = true;
   document.getElementById('memo').value = '';
