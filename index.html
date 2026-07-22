@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.7.1</title>
+  <title>SIS Web Reservation - ver 3.9.8</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,11 +14,11 @@
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.7.1)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.8)</div>
 
   <div class="tabs">
-    <button id="tab-btn-reserve" class="tab-btn active" onclick="switchTab(this, 'reserve-tab')">新規予約</button>
-    <button id="tab-btn-check" class="tab-btn" onclick="switchTab(this, 'check-tab')">予約の確認・キャンセル</button>
+    <button id="tab-btn-reserve" class="tab-btn active" data-tab="reserve-tab">新規予約</button>
+    <button id="tab-btn-check" class="tab-btn" data-tab="check-tab">予約の確認・キャンセル</button>
   </div>
 
   <div id="reserve-tab" class="tab-content active">
@@ -32,7 +32,7 @@
         <div><span class="res-label" style="width: 70px;">予約ID:</span><span id="prev-id" style="font-weight: bold;"></span></div>
       </div>
       新しい日時を選択して、一番下の「変更を確定する」ボタンを押してください。
-      <button type="button" class="btn-cancel-change" onclick="abortChangeMode()">➔ 変更をやめる</button>
+      <button type="button" id="cancel-change-btn" class="btn-cancel-change">➔ 変更をやめる</button>
     </div>
 
     <form id="reservation-form">
@@ -89,7 +89,7 @@
 
       <div class="form-group">
         <label for="memo">ご要望・備考</label>
-        <textarea id="memo" placeholder="髪型のご相談や、お急ぎの時間などがあればご記入ください"></textarea>
+        <textarea id="memo" placeholder="ご相談や、ご用件などがあればご記入ください"></textarea>
       </div>
 
       <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
@@ -108,7 +108,7 @@
       <div class="note">ご予約時に入力した「電話番号」と「メールアドレス」で検索します。</div>
     </div>
     
-    <button type="button" id="check-btn" class="btn-submit" onclick="fetchReservations()">ご予約状況を確認する</button>
+    <button type="button" id="check-btn" class="btn-submit">ご予約状況を確認する</button>
 
     <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
     

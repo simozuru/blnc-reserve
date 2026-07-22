@@ -24,6 +24,51 @@ const staffSelect = document.getElementById('staff');
 const menuSelect = document.getElementById('menu');
 const timeSelect = document.getElementById('time');
 const submitBtn = document.getElementById('submit-btn');
+const checkBtn = document.getElementById('check-btn');
+const cancelChangeBtn = document.getElementById('cancel-change-btn');
+const resultsArea = document.getElementById('check-results-area');
+
+// ==========================================
+// 💡 イベントリスナーの一元管理
+// ==========================================
+function initializeEvents() {
+  // タブ切り替えのイベント紐付け
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const tabId = e.currentTarget.getAttribute('data-tab');
+      switchTab(e.currentTarget, tabId);
+    });
+  });
+
+  // 予約状況確認ボタン
+  if (checkBtn) {
+    checkBtn.addEventListener('click', fetchReservations);
+  }
+
+  // 変更モード中止ボタン
+  if (cancelChangeBtn) {
+    cancelChangeBtn.addEventListener('click', abortChangeMode);
+  }
+
+  // 入力変更時の空き時間取得イベントを設定
+  [dateInput, staffSelect, menuSelect].forEach(element => {
+    if (element) {
+      element.addEventListener('change', updateAvailableTimes);
+    }
+  });
+
+  // 💡【動的カードのイベント委譲】結果エリア内のボタンクリックを検知
+  if (resultsArea) {
+    resultsArea.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target.classList.contains('btn-change')) {
+        startChangeMode(target);
+      } else if (target.classList.contains('btn-cancel')) {
+        requestCancel(target);
+      }
+    });
+  }
+}
 
 // ==========================================
 // 💡【キャッシュ最優先復元】ページを開いた時に即座に復元
@@ -120,7 +165,7 @@ async function initializeSystemSettings() {
       }
     }
 
-    // 5. 💡【新規追加】メニュープルダウンの動的組み立て
+    // 5. メニュープルダウンの動的組み立て
     menuSelect.innerHTML = ''; // 既存の選択肢をクリア
     
     // 初期選択用のプレースホルダーを先頭に配置
@@ -150,13 +195,11 @@ async function initializeSystemSettings() {
     console.error("システム設定の初期化中にエラーが発生しました:", error);
   }
 }
-// ページ読み込み時に実行
-window.addEventListener('DOMContentLoaded', initializeSystemSettings);
 
-
-// 入力変更時の空き時間取得イベントを設定
-[dateInput, staffSelect, menuSelect].forEach(element => {
-  element.addEventListener('change', updateAvailableTimes);
+// ページ読み込み時の初期化処理
+window.addEventListener('DOMContentLoaded', () => {
+  initializeSystemSettings();
+  initializeEvents();
 });
 
 // 空き時間枠のAPI取得と選択肢更新
@@ -328,8 +371,6 @@ form.addEventListener('submit', async (e) => {
 async function fetchReservations() {
   const telInput = document.getElementById('check-tel').value.trim();
   const emailInput = document.getElementById('check-email').value.trim();
-  const resultsArea = document.getElementById('check-results-area');
-  const checkBtn = document.getElementById('check-btn');
 
   if (!telInput || !emailInput) {
     alert('携帯電話番号とメールアドレスの両方を入力してください。');
@@ -392,9 +433,8 @@ async function fetchReservations() {
                     data-time="${res.time}" 
                     data-staff="${safeStaff}" 
                     data-menu="${safeMenu}" 
-                    data-memo="${safeMemo}" 
-                    onclick="startChangeMode(this)">日時を変更する</button>
-            <button type="button" class="btn-cancel" data-id="${safeId}" onclick="requestCancel(this)">この予約をキャンセルする</button>
+                    data-memo="${safeMemo}">日時を変更する</button>
+            <button type="button" class="btn-cancel" data-id="${safeId}">この予約をキャンセルする</button>
           </div>
         </div>
       `;
@@ -481,7 +521,6 @@ async function requestCancel(buttonEl) {
 
   if (!confirm(`ご予約（ID: ${resId}）をキャンセルしてもよろしいですか？\n\n※この操作は取り消せません。`)) return;
 
-  const resultsArea = document.getElementById('check-results-area');
   resultsArea.innerHTML = '<div class="no-data">予約のキャンセル処理を行っています。少々お待ちください...</div>';
 
   const formData = new URLSearchParams();
