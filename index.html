@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.9</title>
-  <!-- 💡 デザインファイルを外部から読み込み -->
-  <link rel="stylesheet" href="style.css">
+  <title>SIS Web Reservation - ver 3.9.9.2</title>
+  
+  <!-- 💡【GAS安全対策】外部ファイルをインクルード関数経由でHTML内に強制展開 -->
+  <?!= include('style'); ?>
 </head>
 <body>
 
-<!-- 💡【プランB改善】GAS同期バグを防ぐため埋め込み構文を完全に排除。設定値は後からJSで格納します -->
 <div id="gas-config-bridge" style="display: none;"></div>
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.9)</div>
+  <div class="subtitle">サロン予約システム (Version 3.9.9.2)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" data-tab="reserve-tab">新規予約</button>
@@ -41,19 +41,14 @@
         <input type="date" id="date" required>
       </div>
 
-      <!-- 💡【可変対応】表示・非表示をJSで自在に切り替えられるよう、id="staff-group" を追加 -->
       <div class="form-group" id="staff-group">
         <label for="staff">担当スタッフ *</label>
-        <select id="staff" required>
-          <!-- 💡 固定のスタッフ名は完全排除。Configの設定に沿ってJSが自動で組み立てます -->
-        </select>
+        <select id="staff" required></select>
       </div>
 
       <div class="form-group">
         <label for="menu">施術メニュー *</label>
-        <select id="menu" required>
-          <!-- 💡 固定のメニュー名は完全排除。Configの設定に沿ってJSが自動で組み立てます -->
-        </select>
+        <select id="menu" required></select>
       </div>
 
       <div class="form-group">
@@ -70,6 +65,7 @@
         <input type="text" id="name" required placeholder="山田 太郎">
       </div>
 
+      <!-- 💡【復活】顧客名簿のC列と連動させるため、フリガナ入力を必須項目として再配置 -->
       <div class="form-group">
         <label for="name_kana">お名前 (フリガナ) *</label>
         <input type="text" id="name_kana" required placeholder="ヤマダ タロウ">
@@ -119,11 +115,11 @@
 
 </div>
 
-<!-- 💡 システム制御ファイルを依存関係の正しい順序で外部から読み込み -->
-<script src="js/config.js"></script>
-<script src="js/storage.js"></script>
-<script src="js/api.js"></script>
-<script src="js/ui.js"></script>
+<!-- 💡【GAS安全対策】ロジック関連ファイルをインクルード関数経由でHTML内に一括展開 -->
+<?!= include('config_js'); ?>
+<?!= include('storage_js'); ?>
+<?!= include('api_js'); ?>
+<?!= include('ui_js'); ?>
 
 </body>
 </html>
