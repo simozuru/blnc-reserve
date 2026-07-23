@@ -7,7 +7,7 @@
 
 // システム設定
 const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyV-hEmTj3F0uN3PfbCOafhOKtFRvFoH6MFAbkv7bwZ7nNH-7maKbaj8xYKn0IujJs_/exec",
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzNzQV7CR1ya5JOWCoXMo7rq_zxT1gozd6W3Ddrg4SkVrvyY36hjh05By7yhl-6lZPt/exec",
   STORAGE_FIELDS: ['name', 'name_kana', 'tel', 'email']
 };
 
