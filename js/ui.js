@@ -1,7 +1,7 @@
 /**
  * =================================================================
- * Salon Information System (SIS) - js/ui.js [Version 3.9.9]
- * [DOM操作・UI制御・イベントハンドリング]
+ * Salon Information System (SIS) - js/ui.js [Version 4.0.0]
+ * [DOM操作・UI制御・タイムテーブル動的生成・イベントハンドリング]
  * =================================================================
  */
 
@@ -10,11 +10,16 @@ const form = document.getElementById('reservation-form');
 const dateInput = document.getElementById('date');
 const staffSelect = document.getElementById('staff');
 const menuSelect = document.getElementById('menu');
-const timeSelect = document.getElementById('time');
 const submitBtn = document.getElementById('submit-btn');
 const checkBtn = document.getElementById('check-btn');
 const cancelChangeBtn = document.getElementById('cancel-change-btn');
 const resultsArea = document.getElementById('check-results-area');
+
+// 💡【ver.4.0.0】セレクトボックスの代わりに新設されたコンテナと隠しフィールドを取得
+const timetableContainer = document.getElementById('timetable-container');
+const timetableLoading = document.getElementById('timetable-loading');
+const selectedDateInput = document.getElementById('selected-date');
+const selectedTimeInput = document.getElementById('selected-time');
 
 // タブ切り替え制御
 function switchTab(buttonEl, tabId) {
@@ -25,6 +30,130 @@ function switchTab(buttonEl, tabId) {
     buttonEl.classList.add('active');
   }
   document.getElementById(tabId).classList.add('active');
+}
+
+/**
+ * 💡【ver.4.0.0 新設】サーバーから取得した複数日データをもとにテーブルを画面に描画する
+ */
+function renderTimetable(multiDayStatuses) {
+  if (!multiDayStatuses || Object.keys(multiDayStatuses).length === 0) {
+    timetableContainer.innerHTML = '<div class="no-data text-danger">空き状況の取得に失敗しました。</div>';
+    return;
+  }
+
+  const dateKeys = Object.keys(multiDayStatuses).sort();
+  
+  // 縦軸（時間枠）の一覧を定義（Configから取得するか、最初の営業日から抽出）
+  let timeSlots = [];
+  for (const dKey of dateKeys) {
+    if (!multiDayStatuses[dKey].SHOP_HOLIDAY) {
+      timeSlots = Object.keys(multiDayStatuses[dKey]).sort();
+      break;
+    }
+  }
+  
+  // すべての日が休みだった場合のフォールバック
+  if (timeSlots.length === 0) {
+    timeSlots = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+  }
+
+  let html = '<table class="timetable-table"><thead><tr><th>時間</th>';
+  
+  // ヘッダー（日付行）の作成
+  dateKeys.forEach(dStr => {
+    const d = new Date(dStr.replace(/-/g, '/'));
+    const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+    const label = `${d.getMonth() + 1}/${d.getDate()}(${dayLabels[d.getDay()]})`;
+    html += `<th>${label}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  // 各時間ごとの行を組み立て
+  timeSlots.forEach(timeStr => {
+    html += `<tr><td class="time-col">${timeStr}</td>`;
+    
+    dateKeys.forEach(dStr => {
+      const dayData = multiDayStatuses[dStr];
+      
+      // 🔍 店舗休みの文字列が埋め込まれている場合（時間軸の最初だけ結合表示し、他はスキップさせる処理の簡略版）
+      if (dayData && dayData.SHOP_HOLIDAY) {
+        // テーブルの表現上、お休みの日は特別な表示スタイルにする
+        if (timeSlots.indexOf(timeStr) === 0) {
+          html += `<td rowspan="${timeSlots.length}" class="shop-holiday-cell"><strong>${dayData.HOLIDAY_TEXT || '休業日'}</strong></td>`;
+        }
+        return;
+      }
+      
+      const status = dayData ? dayData[timeStr] : '×';
+      if (status === '○') {
+        html += `<td class="slot-cell slot-available" data-date="${dStr}" data-time="${timeStr}">○</td>`;
+      } else {
+        html += `<td class="slot-cell slot-unavailable">×</td>`;
+      }
+    });
+    
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  timetableContainer.innerHTML = html;
+
+  // セルがクリックされた時の選択イベントを設定
+  document.querySelectorAll('.slot-available').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      document.querySelectorAll('.slot-available').forEach(c => c.classList.remove('selected'));
+      const target = e.currentTarget;
+      target.classList.add('selected');
+      
+      selectedDateInput.value = target.getAttribute('data-date');
+      selectedTimeInput.value = target.getAttribute('data-time');
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = changeModeData ? '上記の内容で変更を確定する' : '上記の内容で予約を確定する';
+    });
+  });
+}
+
+/**
+ * 💡【ver.4.0.0 修正】非同期での空枠状況リフレッシュ
+ */
+async function updateAvailableTimes() {
+  const dateVal = dateInput.value;
+  const staffVal = staffSelect.value;
+  const menuVal = menuSelect.value;
+
+  if (!dateVal || !staffVal || !menuVal) {
+    timetableContainer.innerHTML = '<div class="no-data">日付、スタッフ、メニューを選択すると、ここに空き状況が表示されます。</div>';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '日時を選択してください';
+    return;
+  }
+
+  if (timetableLoading) timetableLoading.style.display = 'block';
+  
+  try {
+    const resIdParam = (changeModeData && changeModeData.resId) ? `&resId=${changeModeData.resId}` : '';
+    const url = `${CONFIG.GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}${resIdParam}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('空き枠データの通信に失敗しました');
+    const multiDayStatuses = await response.json();
+    
+    // テーブルを描画
+    renderTimetable(multiDayStatuses);
+    
+    // 日時を再選択させるため、隠しフィールドをリセット
+    selectedDateInput.value = '';
+    selectedTimeInput.value = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '日時を選択してください';
+
+  } catch (error) {
+    console.error('空き状況更新エラー:', error);
+    timetableContainer.innerHTML = '<div class="no-data text-danger">エラーが発生しました。時間を置いて再度お試しください。</div>';
+  } finally {
+    if (timetableLoading) timetableLoading.style.display = 'none';
+  }
 }
 
 // 予約状況の取得とカード描画
@@ -137,7 +266,7 @@ async function startChangeMode(buttonEl) {
   document.getElementById('prev-staff').textContent = changeModeData.oldStaff;
 
   document.getElementById('change-banner').style.display = 'block';
-  submitBtn.textContent = '上記の内容で変更を確定する';
+  submitBtn.textContent = '日時を選択してください';
 
   const reserveTabBtn = document.getElementById('tab-btn-reserve');
   switchTab(reserveTabBtn, 'reserve-tab');
@@ -156,13 +285,16 @@ function abortChangeMode() {
   document.getElementById('prev-menu').textContent = '';
   document.getElementById('prev-staff').textContent = '';
 
-  submitBtn.textContent = '上記の内容で予約を確定する';
+  submitBtn.textContent = '日時を選択してください';
   
   dateInput.value = '';
   if (staffSelect.options.length > 0) staffSelect.selectedIndex = 0;
   if (menuSelect.options.length > 0) menuSelect.selectedIndex = 0;
-  timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
-  timeSelect.disabled = true;
+  
+  selectedDateInput.value = '';
+  selectedTimeInput.value = '';
+  timetableContainer.innerHTML = '<div class="no-data">日付、スタッフ、メニューを選択すると、ここに空き状況が表示されます。</div>';
+  submitBtn.disabled = true;
   document.getElementById('memo').value = '';
   
   restoreCachedCustomerData();
@@ -217,7 +349,8 @@ form.addEventListener('submit', async (e) => {
   submitBtn.textContent = changeModeData ? '予約を変更中...' : '予約を登録中...';
 
   CONFIG.STORAGE_FIELDS.forEach(field => {
-    localStorage.setItem(`sis_${field}`, document.getElementById(field).value);
+    const el = document.getElementById(field);
+    if (el) localStorage.setItem(`sis_${field}`, el.value);
   });
 
   const submittedTel = document.getElementById('tel').value;
@@ -225,14 +358,15 @@ form.addEventListener('submit', async (e) => {
 
   const formData = new URLSearchParams();
   
+  // 💡【ver.4.0.0】送信データを隠しフィールドの値（selectedDate / selectedTime）から抽出
   if (changeModeData) {
     formData.append('action', 'change');
     formData.append('resId', changeModeData.resId);
-    formData.append('newDate', dateInput.value);
-    formData.append('newTime', timeSelect.value);
+    formData.append('newDate', selectedDateInput.value);
+    formData.append('newTime', selectedTimeInput.value);
   } else {
-    formData.append('date', dateInput.value);
-    formData.append('time', timeSelect.value);
+    formData.append('date', selectedDateInput.value);
+    formData.append('time', selectedTimeInput.value);
   }
   
   formData.append('staff', staffSelect.value);
@@ -268,8 +402,11 @@ form.addEventListener('submit', async (e) => {
       dateInput.value = '';
       if (staffSelect.options.length > 0) staffSelect.selectedIndex = 0; 
       if (menuSelect.options.length > 0) menuSelect.selectedIndex = 0; 
-      timeSelect.innerHTML = '<option value="">日付を選択してください</option>';
-      timeSelect.disabled = true;
+      
+      selectedDateInput.value = '';
+      selectedTimeInput.value = '';
+      timetableContainer.innerHTML = '<div class="no-data">日付、スタッフ、メニューを選択すると、ここに空き状況が表示されます。</div>';
+      submitBtn.disabled = true;
       document.getElementById('memo').value = '';
 
       restoreCachedCustomerData();
@@ -289,7 +426,6 @@ form.addEventListener('submit', async (e) => {
     alert('通信エラーが発生しました。カレンダー等をご確認ください。');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = '上記の内容で予約を確定する';
     updateAvailableTimes();
   }
 });

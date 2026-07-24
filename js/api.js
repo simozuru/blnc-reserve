@@ -1,7 +1,7 @@
 /**
  * =================================================================
- * Salon Information System (SIS) - js/api.js [Version 3.9.9]
- * [外部API通信・fetch通信専門]
+ * Salon Information System (SIS) - js/api.js [Version 4.0.0]
+ * [役割: 外部API通信・fetch通信専門（二重定義排除・設定初期化特化版）]
  * =================================================================
  */
 
@@ -90,71 +90,5 @@ async function initializeSystemSettings() {
 
   } catch (error) {
     console.error("システム設定の初期化中にエラーが発生しました:", error);
-  }
-}
-
-// 空き時間枠のAPI取得と選択肢更新
-async function updateAvailableTimes() {
-  const dateVal = dateInput.value;
-  const staffVal = staffSelect.value;
-  const menuVal = menuSelect.value;
-
-  if (!dateVal || !staffVal || !menuVal) {
-    timeSelect.disabled = true;
-    timeSelect.innerHTML = '<option value="">日時とメニューを選択してください</option>';
-    submitBtn.disabled = true;
-    return;
-  }
-
-  timeSelect.disabled = true;
-  timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
-  submitBtn.disabled = true;
-
-  try {
-    let fetchUrl = `${CONFIG.GAS_WEB_APP_URL}?method=getSlotStatuses&date=${dateVal}&staff=${encodeURIComponent(staffVal)}&menu=${encodeURIComponent(menuVal)}`;
-    
-    if (changeModeData && changeModeData.resId) {
-      fetchUrl += `&resId=${encodeURIComponent(changeModeData.resId)}`;
-    }
-
-    const response = await fetch(fetchUrl);
-    if (!response.ok) throw new Error('データ取得に失敗しました');
-    const slotStatuses = await response.json();
-
-    timeSelect.innerHTML = '<option value="">時間を選択してください</option>';
-
-    if (slotStatuses.SHOP_HOLIDAY) {
-      timeSelect.innerHTML = '<option value="">本日は定休日・または休業日です</option>';
-      return;
-    }
-
-    const timeKeys = Object.keys(slotStatuses).sort();
-    let selectableCount = 0;
-
-    timeKeys.forEach(timeStr => {
-      const status = slotStatuses[timeStr];
-      const option = document.createElement('option');
-      option.value = timeStr;
-
-      if (status === "○") {
-        option.textContent = `${timeStr}  〇`;
-        selectableCount++;
-      } else {
-        option.textContent = `${timeStr}  ×`;
-        option.disabled = true;
-      }
-      timeSelect.appendChild(option);
-    });
-
-    if (selectableCount > 0) {
-      timeSelect.disabled = false;
-      submitBtn.disabled = false;
-    } else {
-      timeSelect.innerHTML = '<option value="">申し訳ありません。本日はいっぱいです</option>';
-    }
-
-  } catch (error) {
-    console.error('通信エラー:', error);
-    timeSelect.innerHTML = '<option value="">エラーが発生しました。再試行してください</option>';
   }
 }
