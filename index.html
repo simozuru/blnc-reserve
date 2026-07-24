@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIS Web Reservation - ver 3.9.9</title>
+  <title>SIS Web Reservation - ver 4.0.0</title>
   <!-- 💡 デザインファイルを外部から読み込み -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- 💡【プランB改善】GAS同期バグを防ぐため埋め込み構文を完全に排除。設定値は後からJSで格納します -->
+<!-- 💡 GAS同期バグを防ぐため埋め込み構文を完全に排除。設定値は後からJSで格納します -->
 <div id="gas-config-bridge" style="display: none;"></div>
 
 <div class="container">
   <h1>SIS WEB RESERVATION</h1>
-  <div class="subtitle">サロン予約システム (Version 3.9.9)</div>
+  <div class="subtitle">サロン予約システム (Version 4.0.0)</div>
 
   <div class="tabs">
     <button id="tab-btn-reserve" class="tab-btn active" data-tab="reserve-tab">新規予約</button>
@@ -37,30 +37,36 @@
 
     <form id="reservation-form">
       <div class="form-group">
-        <label for="date">ご来店希望日 *</label>
+        <label for="date">ご来店希望開始日 *</label>
         <input type="date" id="date" required>
+        <div class="note">※選択された日付から複数日分（1日/3日/7日分）の空き状況が横並びで表示されます</div>
       </div>
 
-      <!-- 💡【可変対応】表示・非表示をJSで自在に切り替えられるよう、id="staff-group" を追加 -->
+      <!-- 💡 表示・非表示をJSで自在に切り替えられるよう、id="staff-group" を維持 -->
       <div class="form-group" id="staff-group">
         <label for="staff">担当スタッフ *</label>
         <select id="staff" required>
-          <!-- 💡 固定のスタッフ名は完全排除。Configの設定に沿ってJSが自動で組み立てます -->
+          <!-- Configの設定に沿ってJSが自動で組み立てます -->
         </select>
       </div>
 
       <div class="form-group">
         <label for="menu">施術メニュー *</label>
         <select id="menu" required>
-          <!-- 💡 固定のメニュー名は完全排除。Configの設定に沿ってJSが自動で組み立てます -->
+          <!-- Configの設定に沿ってJSが自動で組み立てます -->
         </select>
       </div>
 
+      <!-- 💡【ver.4.0.0 構造変更】セレクトボックスを廃止し、動的タイムテーブル表示エリアへ移行 -->
       <div class="form-group">
-        <label for="time">ご来店希望時間 *</label>
-        <select id="time" required disabled>
-          <option value="">日付を選択してください</option>
-        </select>
+        <label>ご来店希望日時を選択してください *</label>
+        <div id="timetable-loading" class="note" style="display: none;">空き状況を読み込んでいます...</div>
+        <div id="timetable-container">
+          <div class="no-data">日付、スタッフ、メニューを選択すると、ここに空き状況が表示されます。</div>
+        </div>
+        <!-- 選択された「日付」と「時間」をJS側で格納して安全に送信するための隠しフィールド -->
+        <input type="hidden" id="selected-date" required>
+        <input type="hidden" id="selected-time" required>
       </div>
 
       <hr class="section-divider">
@@ -92,7 +98,7 @@
         <textarea id="memo" placeholder="ご相談や、ご用件などがあればご記入ください"></textarea>
       </div>
 
-      <button type="submit" id="submit-btn" class="btn-submit" disabled>上記の内容で予約を確定する</button>
+      <button type="submit" id="submit-btn" class="btn-submit" disabled>日時を選択してください</button>
     </form>
   </div>
 
